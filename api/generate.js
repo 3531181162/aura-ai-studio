@@ -2,10 +2,11 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const API_BASE     = process.env.AI_API_BASE || 'https://api.weelinking.com';
-const AI_API_KEY   = process.env.AI_API_KEY;
+const SUPABASE_URL  = process.env.SUPABASE_URL;
+const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY;
+const API_BASE      = process.env.AI_API_BASE || 'https://api.weelinking.com';
+const AI_API_KEY    = process.env.AI_API_KEY;
 
 // 比例 → 尺寸映射
 const RATIO_SIZE = {
@@ -37,11 +38,11 @@ module.exports = async function handler(req, res) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return res.status(401).json({ error: '未授权，请重新登录' });
 
-  // 用 REST API 直接验证 token（兼容新版 Supabase key 格式）
+  // 用 anon key 验证用户 token
   const authCheck = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: {
       'Authorization': `Bearer ${token}`,
-      'apikey': SUPABASE_KEY,
+      'apikey': SUPABASE_ANON,
     }
   });
   if (!authCheck.ok) return res.status(401).json({ error: '登录已过期，请重新登录' });
