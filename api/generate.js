@@ -1,15 +1,32 @@
 // api/generate.js — Vercel Serverless Function
-// 图片生成接口，保护 API Key 不暴露给前端
 
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;  // 服务端 key，有写权限
-const API_BASE      = process.env.AI_API_BASE || 'https://api.weelinking.com';
-const AI_API_KEY    = process.env.AI_API_KEY;            // 管理员 API Key
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const API_BASE     = process.env.AI_API_BASE || 'https://api.weelinking.com';
+const AI_API_KEY   = process.env.AI_API_KEY;
+
+// 比例 → 尺寸映射
+const RATIO_SIZE = {
+  '1:1':  '1024x1024',
+  '9:16': '1024x1792',
+  '16:9': '1792x1024',
+  '3:4':  '768x1024',
+  '4:3':  '1024x768',
+};
+
+// 风格 → 英文 prompt 关键词
+const STYLE_MAP = {
+  '写实':   'photorealistic, professional studio lighting, high resolution, commercial photography',
+  'realistic': 'photorealistic, professional studio lighting, high resolution, commercial photography',
+  '时尚':   'fashion photography, vogue editorial style, dramatic lighting, high fashion',
+  'fashion': 'fashion photography, vogue editorial style, dramatic lighting, high fashion',
+  '休闲':   'casual lifestyle photography, natural daylight, relaxed and natural',
+  'casual':  'casual lifestyle photography, natural daylight, relaxed and natural',
+};
 
 module.exports = async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
@@ -17,54 +34,55 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // ── 1. 验证用户 Token ──
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: '未授权' });
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
+  if (!token) return res.status(401).json({ error: '未授权，请重新登录' });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
   if (authErr || !user) return res.status(401).json({ error: '登录已过期，请重新登录' });
 
-  // ── 2. 查用户权限和今日用量 ──
+  // ── 2. 查用户权限 ──
   const { data: profile } = await supabase
     .from('profiles').select('daily_limit,is_active,role').eq('id', user.id).single();
 
   if (!profile || !profile.is_active)
     return res.status(403).json({ error: '账号已停用，请联系管理员' });
 
-  // 查今日已用次数（按生成总张数）
   const today = new Date().toISOString().split('T')[0];
   const { data: usageRows } = await supabase
-    .from('usage_logs')
-    .select('count')
-    .eq('user_id', user.id)
-    .gte('created_at', today + 'T00:00:00Z');
+    .from('usage_logs').select('count').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z');
 
   const usedToday = (usageRows || []).reduce((s, r) => s + (r.count || 0), 0);
   const limit = profile.daily_limit || 20;
 
   if (usedToday >= limit && profile.role !== 'admin')
-    return res.status(429).json({ error: `今日生成已达上限（${limit}张），请联系管理员提额` });
+    return res.status(429).json({ error: `今日生成已达上限（${limit}张）` });
 
-  // ── 3. 解析请求参数 ──
-  const {
-    prompt  = '',
-    model   = 'gpt-image-2',
-    count   = 1,
-    size    = '1024x1024',
-  } = req.body || {};
+  // ── 3. 解析参数（兼容两种字段名）──
+  const body = req.body || {};
+  const keyword      = body.keyword || body.prompt || '';
+  const customPrompt = body.customPrompt || '';
+  const style        = body.style || 'realistic';
+  const model        = body.model || 'gpt-image-2';
+  const ratio        = body.ratio || '1:1';
+  const count        = parseInt(body.qty || body.count || 1);
 
-  if (!prompt || prompt.trim().length < 2)
-    return res.status(400).json({ error: '提示词不能为空' });
+  if (!keyword && !customPrompt)
+    return res.status(400).json({ error: '请输入产品关键词' });
 
-  const n = Math.min(Math.max(parseInt(count) || 1, 1), 8);
+  const styleDesc = STYLE_MAP[style] || STYLE_MAP['realistic'];
+  const prompt = customPrompt ||
+    `Young Asian female model wearing ${keyword}. Full body product shot, white background, ${styleDesc}, 8K resolution, e-commerce main image.`;
 
-  // ── 4. 调用 AI API ──
+  const size = RATIO_SIZE[ratio] || '1024x1024';
+  const n = Math.min(Math.max(count, 1), 8);
+
   const allowedModels = ['gpt-image-2', 'gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview'];
   const safeModel = allowedModels.includes(model) ? model : 'gpt-image-2';
 
-  const results = [];
-  const errors  = [];
+  // ── 4. 调用 AI API ──
+  const urls = [];
+  const errors = [];
 
   for (let i = 0; i < n; i++) {
     try {
@@ -87,32 +105,33 @@ module.exports = async function handler(req, res) {
       const data = await aiRes.json();
       const item = data.data?.[0];
       if (item?.url) {
-        results.push({ url: item.url, type: 'url' });
+        urls.push(item.url);
       } else if (item?.b64_json) {
-        results.push({ b64: item.b64_json, type: 'b64' });
+        urls.push(`data:image/png;base64,${item.b64_json}`);
       }
-    } catch(e) {
+    } catch (e) {
       errors.push(e.message);
     }
   }
 
-  if (results.length === 0)
-    return res.status(500).json({ error: `生成失败：${errors[0] || '未知错误'}` });
+  if (urls.length === 0)
+    return res.status(500).json({ error: `生成失败：${errors[0] || '请检查API配置'}` });
 
   // ── 5. 记录用量 ──
   await supabase.from('usage_logs').insert({
-    user_id:    user.id,
-    model:      safeModel,
-    count:      results.length,
-    prompt:     prompt.slice(0, 200),
+    user_id: user.id,
+    model: safeModel,
+    count: urls.length,
+    prompt: prompt.slice(0, 200),
     created_at: new Date().toISOString(),
   });
 
+  // 返回 urls 数组（app.html 期望的格式）
   return res.status(200).json({
-    images:    results,
-    generated: results.length,
-    failed:    errors.length,
-    used_today: usedToday + results.length,
+    urls,
+    generated: urls.length,
+    failed: errors.length,
+    used_today: usedToday + urls.length,
     limit,
   });
 };
