@@ -3,1270 +3,1162 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AURA · AI电商视觉工作台</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>AURA · AI 电商视觉工作台</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/style.css" />
   <script src="js/config.js"></script>
   <style>
-    /* ===== Reset & Base ===== */
+    /* ── 全局重置 ───────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg-base); color: var(--text-primary); font-family: var(--font-body); overflow: hidden; }
 
-    body {
-      font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-      background: var(--bg-0, #07060A);
-      color: var(--text-1, #F5F0E8);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    /* ── 动画 ───────────────────────────────── */
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes pulse   { 0%,100% { opacity: .4; } 50% { opacity: .9; } }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    #app { display: flex; flex-direction: column; height: 100vh; animation: fadeIn .45s var(--ease); }
+
+    /* ── 顶部导航栏 ─────────────────────────── */
+    .topbar {
+      height: 56px; flex-shrink: 0; display: flex; align-items: center;
+      padding: 0 20px; gap: 12px;
+      background: rgba(0,0,0,.88); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-default);
+      position: relative; z-index: 100;
     }
-
-    /* ===== Top Nav ===== */
-    #top-nav {
-      height: 56px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      padding: 0 24px;
-      gap: 16px;
-      background: rgba(7,6,10,0.95);
-      border-bottom: 1px solid rgba(201,169,110,0.18);
-      backdrop-filter: blur(12px);
-      z-index: 100;
+    .topbar-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+    .topbar-logo .logo-icon { font-size: 20px; color: var(--gold); line-height: 1; }
+    .topbar-logo .logo-text { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--gold); letter-spacing: .06em; }
+    .topbar-spacer { flex: 1; }
+    .topbar-meta { display: flex; align-items: center; gap: 16px; }
+    .topbar-user { font-size: var(--text-sm); color: var(--text-secondary); }
+    .topbar-usage {
+      font-size: var(--text-xs); color: var(--text-muted);
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: var(--radius-full); padding: 3px 10px;
     }
-
-    #top-nav .logo {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      background: linear-gradient(135deg, var(--gold, #C9A96E), var(--gold-lt, #E8D5A3));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      flex-shrink: 0;
+    .topbar-usage span { color: var(--gold); font-weight: 600; }
+    .btn-logout {
+      font-size: var(--text-xs); color: var(--text-muted); cursor: pointer;
+      background: none; border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+      padding: 4px 10px; transition: var(--transition);
     }
+    .btn-logout:hover { color: var(--text-primary); border-color: var(--border-strong); }
 
-    #top-nav .logo span {
-      font-size: 11px;
-      font-weight: 400;
-      letter-spacing: 1px;
-      margin-left: 8px;
-      opacity: 0.6;
-      -webkit-text-fill-color: var(--gold-lt, #E8D5A3);
-      vertical-align: middle;
+    /* ── 主体三栏 ───────────────────────────── */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── 左侧导航 ───────────────────────────── */
+    .sidebar {
+      width: 180px; flex-shrink: 0; background: #040404;
+      border-right: 1px solid var(--border-default);
+      display: flex; flex-direction: column; padding: 16px 0; gap: 2px; overflow-y: auto;
     }
-
-    #top-nav .spacer { flex: 1; }
-
-    #top-nav .user-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13px;
-    }
-
-    #top-nav .user-nickname {
-      color: var(--gold-lt, #E8D5A3);
-      font-weight: 500;
-    }
-
-    #top-nav .usage-badge {
-      padding: 3px 10px;
-      border-radius: 20px;
-      background: rgba(201,169,110,0.12);
-      border: 1px solid rgba(201,169,110,0.3);
-      color: var(--gold, #C9A96E);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    #top-nav .usage-badge .used { color: var(--gold-lt, #E8D5A3); font-weight: 600; }
-
-    #btn-logout {
-      padding: 6px 16px;
-      border-radius: 6px;
-      border: 1px solid rgba(201,169,110,0.35);
-      background: transparent;
-      color: var(--gold, #C9A96E);
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    #btn-logout:hover {
-      background: rgba(201,169,110,0.1);
-      border-color: var(--gold, #C9A96E);
-    }
-
-    /* ===== Main Layout ===== */
-    #main-layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* ===== Left Sidebar ===== */
-    #left-nav {
-      width: 200px;
-      flex-shrink: 0;
-      background: #0D0C11;
-      border-right: 1px solid rgba(201,169,110,0.10);
-      display: flex;
-      flex-direction: column;
-      padding: 16px 0;
-      gap: 4px;
-      overflow-y: auto;
-    }
-
-    .nav-section-label {
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: rgba(245,240,232,0.3);
-      padding: 8px 20px 4px;
-      text-transform: uppercase;
-    }
-
     .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      border-radius: 0;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      border-left: 3px solid transparent;
-      color: rgba(245,240,232,0.6);
-      font-size: 14px;
-      user-select: none;
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 18px; cursor: pointer;
+      font-size: var(--text-sm); color: var(--text-muted);
+      transition: var(--transition); user-select: none;
+      border-left: 2px solid transparent;
     }
-
-    .nav-item:hover {
-      background: rgba(201,169,110,0.07);
-      color: var(--gold-lt, #E8D5A3);
-    }
-
+    .nav-item:hover { color: var(--text-secondary); background: var(--bg-hover); }
     .nav-item.active {
-      background: rgba(201,169,110,0.12);
-      border-left-color: var(--gold, #C9A96E);
-      color: var(--gold-lt, #E8D5A3);
+      color: var(--gold); background: rgba(201,169,110,.06);
+      border-left-color: var(--gold); font-weight: 500;
+    }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    /* ── 中间参数面板 ────────────────────────── */
+    .panel {
+      width: 320px; flex-shrink: 0; background: var(--bg-surface);
+      border-right: 1px solid var(--border-default);
+      overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column;
+    }
+    .panel-inner { padding: 20px 16px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
+    .panel-section { display: flex; flex-direction: column; gap: 10px; animation: fadeIn .28s var(--ease); }
+    .panel-label {
+      font-size: var(--text-xs); font-weight: 600; letter-spacing: .08em;
+      color: var(--text-muted); text-transform: uppercase;
     }
 
-    .nav-item .nav-icon {
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      font-size: 16px;
+    /* 输入控件 */
+    .field-textarea, .field-input, .field-select {
+      width: 100%; background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); color: var(--text-primary);
+      font-size: var(--text-sm); font-family: var(--font-body);
+      padding: 9px 12px; resize: none; outline: none;
+      transition: border-color var(--transition);
     }
-
-    .nav-item .nav-label { font-size: 13px; }
-
-    .nav-divider {
-      height: 1px;
-      background: rgba(201,169,110,0.08);
-      margin: 8px 16px;
+    .field-textarea:focus, .field-input:focus, .field-select:focus { border-color: var(--border-gold); }
+    .field-textarea { min-height: 64px; line-height: 1.55; }
+    .field-select {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
     }
+    .field-select option { background: #111; }
 
-    /* ===== Center Panel ===== */
-    #center-panel {
-      width: 320px;
-      flex-shrink: 0;
-      background: #0A0910;
-      border-right: 1px solid rgba(201,169,110,0.10);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    /* 标签单选组 */
+    .tag-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      padding: 5px 12px; border-radius: var(--radius-sm);
+      font-size: var(--text-xs); cursor: pointer; user-select: none;
+      border: 1px solid var(--border-default); color: var(--text-secondary);
+      background: var(--bg-elevated); transition: var(--transition);
     }
+    .tag:hover { border-color: var(--border-gold); color: var(--gold-light); }
+    .tag.selected { border-color: var(--gold); color: var(--gold); background: var(--gold-subtle); font-weight: 500; }
 
-    #center-panel .panel-title {
-      padding: 16px 20px 12px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--gold, #C9A96E);
-      letter-spacing: 1px;
-      border-bottom: 1px solid rgba(201,169,110,0.10);
-      flex-shrink: 0;
-    }
-
-    #center-panel .panel-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    #center-panel .panel-scroll::-webkit-scrollbar { width: 4px; }
-    #center-panel .panel-scroll::-webkit-scrollbar-track { background: transparent; }
-    #center-panel .panel-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); border-radius: 2px; }
-
-    /* Form Groups */
-    .form-group { display: flex; flex-direction: column; gap: 8px; }
-
-    .form-label {
-      font-size: 12px;
-      color: rgba(245,240,232,0.5);
-      letter-spacing: 0.5px;
-    }
-
-    .form-input,
-    .form-textarea,
-    .form-select {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(201,169,110,0.18);
-      border-radius: 8px;
-      color: var(--text-1, #F5F0E8);
-      font-size: 13px;
-      padding: 9px 12px;
-      outline: none;
-      transition: border-color 0.2s;
-      font-family: inherit;
-    }
-
-    .form-input:focus,
-    .form-textarea:focus,
-    .form-select:focus {
-      border-color: rgba(201,169,110,0.5);
-      background: rgba(255,255,255,0.06);
-    }
-
-    .form-input::placeholder,
-    .form-textarea::placeholder {
-      color: rgba(245,240,232,0.25);
-    }
-
-    .form-select {
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23C9A96E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      padding-right: 32px;
-    }
-
-    .form-select option {
-      background: #12101A;
-      color: var(--text-1, #F5F0E8);
-    }
-
-    .form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-
-    /* Tag Groups */
-    .tag-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .tag-btn {
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid rgba(201,169,110,0.2);
-      background: rgba(255,255,255,0.03);
-      color: rgba(245,240,232,0.55);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-      user-select: none;
-    }
-
-    .tag-btn:hover {
-      border-color: rgba(201,169,110,0.45);
-      color: var(--gold-lt, #E8D5A3);
-    }
-
-    .tag-btn.selected {
-      border-color: var(--gold, #C9A96E);
-      background: rgba(201,169,110,0.15);
-      color: var(--gold-lt, #E8D5A3);
-      font-weight: 500;
-    }
-
-    /* Collapsible */
+    /* 可折叠区 */
     .collapsible-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; font-size: var(--text-xs); color: var(--text-muted);
+      padding: 2px 0; user-select: none;
     }
+    .collapsible-header:hover { color: var(--text-secondary); }
+    .collapsible-arrow { transition: transform var(--transition); }
+    .collapsible-header.open .collapsible-arrow { transform: rotate(180deg); }
+    .collapsible-body { overflow: hidden; max-height: 0; transition: max-height .3s var(--ease); }
+    .collapsible-body.open { max-height: 300px; }
 
-    .collapsible-header .toggle-icon {
-      font-size: 12px;
-      color: rgba(201,169,110,0.5);
-      transition: transform 0.2s;
+    /* 生成按钮 */
+    .btn-generate {
+      width: 100%; height: 52px; border: none; border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 50%, var(--gold-light) 100%);
+      color: #000; font-size: var(--text-base); font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity var(--transition), transform var(--transition);
+      letter-spacing: .04em; font-family: var(--font-body);
     }
+    .btn-generate:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .btn-generate:active:not(:disabled) { transform: translateY(0); opacity: .95; }
+    .btn-generate:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .btn-generate .spin-icon { animation: spin .8s linear infinite; display: none; font-style: normal; }
+    .btn-generate.loading .spin-icon { display: inline-block; }
 
-    .collapsible-header.open .toggle-icon { transform: rotate(180deg); }
+    /* 进度条 */
+    .progress-wrap { display: none; flex-direction: column; gap: 6px; }
+    .progress-wrap.show { display: flex; }
+    .progress-bar-bg { height: 3px; background: var(--bg-overlay); border-radius: 999px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold)); border-radius: 999px; width: 0%; transition: width .4s var(--ease); }
+    .progress-text { font-size: var(--text-xs); color: var(--text-muted); text-align: center; }
 
-    .collapsible-body {
-      overflow: hidden;
-      transition: max-height 0.25s ease;
-      max-height: 0;
+    /* 上传拖拽区 */
+    .upload-zone {
+      border: 1.5px dashed var(--border-strong); border-radius: var(--radius-md);
+      padding: 24px 16px; text-align: center; cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+      background: var(--bg-elevated);
     }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--gold); background: var(--gold-subtle); }
+    .upload-zone-icon { font-size: 28px; color: var(--text-muted); line-height: 1; }
+    .upload-zone-text { font-size: var(--text-xs); color: var(--text-muted); margin-top: 6px; }
+    .upload-zone-sub { font-size: 10px; color: var(--text-disabled); margin-top: 3px; }
+    .upload-thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .upload-thumb { width: 52px; height: 52px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--border-default); }
 
-    .collapsible-body.open { max-height: 200px; }
-
-    /* Generate Button */
-    #btn-generate {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      background: linear-gradient(135deg, #C9A96E 0%, #E8D5A3 50%, #C9A96E 100%);
-      background-size: 200% 200%;
-      color: #07060A;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      cursor: pointer;
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
+    /* 详情页模块列表 */
+    .module-list { display: flex; flex-direction: column; gap: 8px; }
+    .module-item {
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 7px;
     }
-
-    #btn-generate:hover {
-      background-position: right center;
-      box-shadow: 0 4px 20px rgba(201,169,110,0.35);
-      transform: translateY(-1px);
+    .module-item-header { display: flex; align-items: center; justify-content: space-between; }
+    .module-name { font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); }
+    .btn-module-del { background: none; border: none; color: var(--text-disabled); cursor: pointer; font-size: 14px; padding: 0 2px; transition: color var(--transition); }
+    .btn-module-del:hover { color: #e55555; }
+    .btn-add-module {
+      padding: 7px; border: 1px dashed var(--border-default); border-radius: var(--radius-sm);
+      background: none; color: var(--text-muted); font-size: var(--text-xs); cursor: pointer;
+      transition: var(--transition); width: 100%;
     }
+    .btn-add-module:hover { border-color: var(--gold); color: var(--gold); }
 
-    #btn-generate:active { transform: translateY(0); }
-
-    #btn-generate:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
+    /* 日期筛选 */
+    .date-tabs { display: flex; gap: 6px; }
+    .date-tab {
+      padding: 5px 12px; border-radius: var(--radius-sm); font-size: var(--text-xs);
+      border: 1px solid var(--border-default); color: var(--text-muted); cursor: pointer;
+      background: var(--bg-elevated); transition: var(--transition);
     }
+    .date-tab.active { border-color: var(--gold); color: var(--gold); background: var(--gold-subtle); }
 
-    /* Progress Bar */
-    #progress-wrap {
-      display: none;
-      flex-direction: column;
-      gap: 6px;
+    /* ── 右侧结果区 ─────────────────────────── */
+    .result-area { flex: 1; background: var(--bg-base); display: flex; flex-direction: column; overflow: hidden; }
+    .result-topbar {
+      height: 48px; flex-shrink: 0; display: flex; align-items: center;
+      padding: 0 16px; gap: 10px; border-bottom: 1px solid var(--border-default);
+      background: rgba(0,0,0,.5);
     }
-
-    #progress-wrap.visible { display: flex; }
-
-    #progress-label {
-      font-size: 12px;
-      color: var(--gold, #C9A96E);
-      display: flex;
-      justify-content: space-between;
-    }
-
-    #progress-bar-track {
-      height: 4px;
-      background: rgba(201,169,110,0.12);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    #progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #C9A96E, #E8D5A3);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    /* ===== Right Result Area ===== */
-    #right-area {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg-0, #07060A);
-    }
-
-    /* Batch Tabs */
-    #batch-tabs-bar {
-      display: flex;
-      align-items: center;
-      padding: 0 20px;
-      gap: 4px;
-      border-bottom: 1px solid rgba(201,169,110,0.10);
-      background: rgba(7,6,10,0.8);
-      flex-shrink: 0;
-      min-height: 44px;
-      overflow-x: auto;
-    }
-
-    #batch-tabs-bar::-webkit-scrollbar { height: 2px; }
-    #batch-tabs-bar::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); }
-
+    .batch-tabs { display: flex; align-items: center; gap: 6px; flex: 1; overflow-x: auto; }
     .batch-tab {
-      padding: 8px 16px;
-      border-radius: 6px 6px 0 0;
-      border: 1px solid transparent;
-      border-bottom: none;
-      cursor: pointer;
-      font-size: 13px;
-      color: rgba(245,240,232,0.45);
-      white-space: nowrap;
-      transition: all 0.15s;
-      user-select: none;
-      position: relative;
-      top: 1px;
+      padding: 4px 12px; border-radius: var(--radius-sm); font-size: var(--text-xs);
+      border: 1px solid var(--border-default); color: var(--text-muted); cursor: pointer;
+      white-space: nowrap; transition: var(--transition); background: transparent;
     }
-
-    .batch-tab:hover { color: var(--gold-lt, #E8D5A3); }
-
-    .batch-tab.active {
-      background: rgba(201,169,110,0.10);
-      border-color: rgba(201,169,110,0.18);
-      border-bottom-color: #07060A;
-      color: var(--gold, #C9A96E);
-      font-weight: 500;
+    .batch-tab.active { border-color: var(--gold); color: var(--gold); background: var(--gold-subtle); }
+    .batch-tab-add {
+      background: none; border: 1px dashed var(--border-default); color: var(--text-disabled);
+      border-radius: var(--radius-sm); padding: 3px 8px; cursor: pointer; font-size: 16px;
+      transition: var(--transition); line-height: 1;
     }
-
-    .batch-tab .tab-close {
-      margin-left: 6px;
-      opacity: 0;
-      transition: opacity 0.15s;
-      font-size: 12px;
-    }
-
-    .batch-tab:hover .tab-close { opacity: 0.6; }
-    .batch-tab .tab-close:hover { opacity: 1; color: #ff6b6b; }
-
-    #btn-new-batch {
-      padding: 5px 12px;
-      border-radius: 5px;
-      border: 1px dashed rgba(201,169,110,0.25);
-      background: transparent;
-      color: rgba(201,169,110,0.5);
-      font-size: 13px;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: all 0.15s;
-      margin-left: 4px;
-    }
-
-    #btn-new-batch:hover {
-      border-color: var(--gold, #C9A96E);
-      color: var(--gold, #C9A96E);
-    }
-
-    /* Grid Controls */
-    #grid-controls {
-      display: flex;
-      align-items: center;
-      padding: 10px 20px;
-      gap: 12px;
-      flex-shrink: 0;
-      border-bottom: 1px solid rgba(201,169,110,0.06);
-    }
-
-    #grid-controls .ctrl-label {
-      font-size: 12px;
-      color: rgba(245,240,232,0.35);
-    }
-
+    .batch-tab-add:hover { border-color: var(--gold); color: var(--gold); }
+    .col-control { display: flex; align-items: center; gap: 4px; }
+    .col-label { font-size: 10px; color: var(--text-disabled); margin-right: 2px; }
     .col-btn {
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid rgba(201,169,110,0.15);
-      background: transparent;
-      color: rgba(245,240,232,0.4);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
+      width: 26px; height: 26px; border-radius: var(--radius-sm); border: 1px solid var(--border-default);
+      background: transparent; color: var(--text-muted); font-size: var(--text-xs); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: var(--transition);
     }
-
-    .col-btn.active,
-    .col-btn:hover {
-      border-color: rgba(201,169,110,0.4);
-      color: var(--gold, #C9A96E);
-      background: rgba(201,169,110,0.06);
+    .col-btn.active, .col-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-clear {
+      padding: 4px 10px; border-radius: var(--radius-sm); font-size: var(--text-xs);
+      background: none; border: 1px solid var(--border-default); color: var(--text-muted);
+      cursor: pointer; transition: var(--transition);
     }
+    .btn-clear:hover { border-color: #e55555; color: #e55555; }
 
-    #result-count {
-      margin-left: auto;
-      font-size: 12px;
-      color: rgba(245,240,232,0.3);
+    /* 结果滚动容器 */
+    .result-scroll { flex: 1; overflow-y: auto; padding: 20px; }
+
+    /* 空状态 */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; gap: 16px; color: var(--text-disabled);
     }
+    .empty-icon { font-size: 56px; opacity: .3; animation: pulse 3s ease-in-out infinite; }
+    .empty-text { font-size: var(--text-sm); letter-spacing: .06em; }
 
-    /* Image Grid */
-    #result-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
+    /* 图片网格 */
+    .img-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); }
+    .img-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .img-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
 
-    #result-scroll::-webkit-scrollbar { width: 5px; }
-    #result-scroll::-webkit-scrollbar-track { background: transparent; }
-    #result-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.15); border-radius: 3px; }
-
-    #image-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-
-    #image-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-    #image-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
-    #image-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
-
-    /* Empty State */
-    #empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      gap: 16px;
-      color: rgba(245,240,232,0.2);
-    }
-
-    #empty-state .empty-icon {
-      font-size: 56px;
-      opacity: 0.4;
-    }
-
-    #empty-state .empty-title {
-      font-size: 16px;
-      color: rgba(245,240,232,0.35);
-    }
-
-    #empty-state .empty-desc {
-      font-size: 13px;
-      color: rgba(245,240,232,0.2);
-      text-align: center;
-      line-height: 1.7;
-    }
-
-    /* Image Card */
+    /* 图片卡片 */
     .img-card {
-      border-radius: 10px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(201,169,110,0.10);
-      position: relative;
-      aspect-ratio: 1 / 1;
-      transition: border-color 0.2s, transform 0.2s;
-      cursor: pointer;
+      position: relative; border-radius: var(--radius-md); overflow: hidden;
+      border: 1px solid var(--border-default); aspect-ratio: 1;
+      background: var(--bg-elevated); cursor: pointer;
+      transition: border-color var(--transition), transform var(--transition);
+      animation: slideUp .35s var(--ease) both;
     }
-
-    .img-card:hover {
-      border-color: rgba(201,169,110,0.3);
-      transform: translateY(-2px);
+    .img-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+    .img-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .img-card-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,.65);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      opacity: 0; transition: opacity var(--transition);
     }
-
-    .img-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
+    .img-card:hover .img-card-overlay { opacity: 1; }
+    .img-card-num {
+      position: absolute; top: 8px; left: 8px; font-size: 10px;
+      background: rgba(0,0,0,.7); color: var(--text-muted);
+      border-radius: var(--radius-sm); padding: 2px 6px;
     }
-
-    .img-card .card-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to bottom, rgba(7,6,10,0.55) 0%, transparent 35%, transparent 65%, rgba(7,6,10,0.7) 100%);
-      opacity: 0;
-      transition: opacity 0.2s;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 10px;
+    .img-card-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08); color: #fff; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition), border-color var(--transition);
     }
+    .img-card-btn:hover { background: var(--gold); border-color: var(--gold); color: #000; }
+    .img-card-btn.del:hover { background: #e55555; border-color: #e55555; color: #fff; }
 
-    .img-card:hover .card-overlay { opacity: 1; }
-
-    .card-seq {
-      font-size: 11px;
-      color: var(--gold, #C9A96E);
-      font-weight: 600;
-      background: rgba(7,6,10,0.6);
-      padding: 2px 7px;
-      border-radius: 4px;
-      width: fit-content;
+    /* 骨架屏 */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-overlay) 50%, var(--bg-elevated) 75%);
+      background-size: 200% 100%; animation: shimmer 1.4s infinite;
     }
+    .skeleton-card { border-radius: var(--radius-md); aspect-ratio: 1; }
 
-    .card-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
+    /* 文案结果 */
+    .copy-result { display: none; flex-direction: column; gap: 14px; }
+    .copy-result.show { display: flex; }
+    .copy-block {
+      background: var(--bg-elevated); border: 1px solid var(--border-default);
+      border-radius: var(--radius-md); padding: 14px 16px;
+      animation: slideUp .3s var(--ease);
     }
-
-    .card-action-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      border: 1px solid rgba(201,169,110,0.3);
-      background: rgba(7,6,10,0.7);
-      color: var(--gold-lt, #E8D5A3);
-      font-size: 15px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s;
+    .copy-block-label {
+      font-size: var(--text-xs); color: var(--text-muted); font-weight: 600;
+      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px;
     }
-
-    .card-action-btn:hover { background: rgba(201,169,110,0.2); border-color: var(--gold, #C9A96E); }
-    .card-action-btn.del:hover { background: rgba(255,80,80,0.2); border-color: rgba(255,80,80,0.5); color: #ff6b6b; }
-
-    /* Loading skeleton */
-    .img-card.loading {
-      background: linear-gradient(90deg, rgba(201,169,110,0.05) 25%, rgba(201,169,110,0.1) 50%, rgba(201,169,110,0.05) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+    .copy-block-content { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap; }
+    .copy-block-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .btn-copy-text {
+      font-size: var(--text-xs); color: var(--text-muted); background: none;
+      border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+      padding: 3px 10px; cursor: pointer; transition: var(--transition);
     }
+    .btn-copy-text:hover { border-color: var(--gold); color: var(--gold); }
 
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    .img-card.loading .load-label {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      color: rgba(201,169,110,0.4);
-      font-size: 13px;
-    }
-
-    .spin {
-      display: inline-block;
-      width: 22px;
-      height: 22px;
-      border: 2px solid rgba(201,169,110,0.15);
-      border-top-color: var(--gold, #C9A96E);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Toast */
-    #toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 9999;
-    }
-
-    .toast {
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-size: 13px;
-      background: rgba(20,18,28,0.95);
-      border: 1px solid rgba(201,169,110,0.2);
-      color: var(--text-1, #F5F0E8);
-      backdrop-filter: blur(8px);
-      animation: toast-in 0.25s ease;
-      max-width: 300px;
-    }
-
-    .toast.success { border-color: rgba(100,200,100,0.3); color: #90ee90; }
-    .toast.error { border-color: rgba(255,80,80,0.3); color: #ff9090; }
-
-    @keyframes toast-in {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Image Lightbox */
-    #lightbox {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(7,6,10,0.92);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(6px);
-    }
-
-    #lightbox.open { display: flex; }
-
-    #lightbox img {
-      max-width: 90vw;
-      max-height: 90vh;
-      border-radius: 8px;
-      border: 1px solid rgba(201,169,110,0.2);
-      object-fit: contain;
-    }
-
-    #lightbox-close {
-      position: absolute;
-      top: 20px;
-      right: 24px;
-      font-size: 28px;
-      color: rgba(245,240,232,0.6);
-      cursor: pointer;
-      background: none;
-      border: none;
-      line-height: 1;
-    }
-    #lightbox-close:hover { color: var(--text-1, #F5F0E8); }
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
   </style>
 </head>
 <body>
 
-  <!-- ===== Top Navigation ===== -->
-  <nav id="top-nav">
-    <div class="logo">AURA<span>AI 视觉工作台</span></div>
-    <div class="spacer"></div>
-    <div class="user-info">
-      <span class="user-nickname" id="user-nickname">加载中…</span>
-      <span class="usage-badge">今日已用 <span class="used" id="used-count">0</span> / <span id="limit-count">50</span></span>
-      <button id="btn-logout">退出</button>
+<div id="app" style="display:none;">
+
+  <!-- ▌顶部导航栏 ▌ -->
+  <header class="topbar">
+    <a href="app.html" class="topbar-logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">AURA</span>
+    </a>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-meta">
+      <span class="topbar-user" id="userName">加载中...</span>
+      <span class="topbar-usage">今日 <span id="usageCount">0</span> / <span id="usageLimit">50</span></span>
+      <button class="btn-logout" id="btnLogout">退出</button>
     </div>
-  </nav>
+  </header>
 
-  <!-- ===== Main Layout ===== -->
-  <div id="main-layout">
+  <!-- ▌主体三栏 ▌ -->
+  <div class="workspace">
 
-    <!-- Left Sidebar -->
-    <nav id="left-nav">
-      <div class="nav-section-label">生成工具</div>
-      <div class="nav-item active" data-module="model-gen">
-        <span class="nav-icon">🧍</span>
-        <span class="nav-label">模特图生成</span>
+    <!-- ▌左侧导航 ▌ -->
+    <nav class="sidebar">
+      <div class="nav-item active" data-panel="txt2img">
+        <span class="nav-icon">✦</span><span>文生图</span>
       </div>
-      <div class="nav-item" data-module="bg-swap">
-        <span class="nav-icon">🖼️</span>
-        <span class="nav-label">换背景</span>
+      <div class="nav-item" data-panel="batchsku">
+        <span class="nav-icon">◈</span><span>批量 SKU</span>
       </div>
-      <div class="nav-item" data-module="copywriting">
-        <span class="nav-icon">✍️</span>
-        <span class="nav-label">文案生成</span>
+      <div class="nav-item" data-panel="detail">
+        <span class="nav-icon">▦</span><span>详情页</span>
       </div>
-      <div class="nav-item" data-module="batch-sku">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">批量 SKU</span>
+      <div class="nav-item" data-panel="history">
+        <span class="nav-icon">◷</span><span>历史记录</span>
       </div>
-      <div class="nav-divider"></div>
-      <div class="nav-section-label">记录</div>
-      <div class="nav-item" data-module="history">
-        <span class="nav-icon">🕓</span>
-        <span class="nav-label">历史记录</span>
+      <div class="nav-item" data-panel="copywrite">
+        <span class="nav-icon">✍</span><span>文案生成</span>
       </div>
     </nav>
 
-    <!-- Center Panel -->
-    <div id="center-panel">
-      <div class="panel-title">⚙ 参数配置</div>
-      <div class="panel-scroll">
+    <!-- ▌中间参数面板 ▌ -->
+    <aside class="panel">
+      <div class="panel-inner">
 
-        <!-- 产品关键词 -->
-        <div class="form-group">
-          <label class="form-label">产品关键词</label>
-          <input id="input-keyword" class="form-input" type="text" placeholder="例：白色连衣裙、牛皮手提包…" />
+        <!-- ══ 文生图面板 ══ -->
+        <div id="panel-txt2img">
+
+          <div class="panel-section">
+            <label class="panel-label">产品关键词</label>
+            <textarea id="t2i-keyword" class="field-textarea" rows="2" placeholder="例：黑色牛皮通勤背包，极简设计感..."></textarea>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">拍摄风格</label>
+            <div class="tag-group" id="t2i-style-tags">
+              <span class="tag selected" data-val="写实">写实</span>
+              <span class="tag" data-val="时尚">时尚</span>
+              <span class="tag" data-val="休闲">休闲</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">生成模型</label>
+            <select id="t2i-model" class="field-select">
+              <option value="gpt-image-2">gpt-image-2</option>
+              <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
+              <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
+            </select>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">图片比例</label>
+            <div class="tag-group" id="t2i-ratio-tags">
+              <span class="tag selected" data-val="1:1">1:1</span>
+              <span class="tag" data-val="9:16">9:16</span>
+              <span class="tag" data-val="16:9">16:9</span>
+              <span class="tag" data-val="3:4">3:4</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">分辨率</label>
+            <div class="tag-group" id="t2i-res-tags">
+              <span class="tag selected" data-val="1K">1K</span>
+              <span class="tag" data-val="2K">2K</span>
+              <span class="tag" data-val="4K">4K</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">生成数量</label>
+            <div class="tag-group" id="t2i-qty-tags">
+              <span class="tag" data-val="1">1</span>
+              <span class="tag" data-val="2">2</span>
+              <span class="tag selected" data-val="4">4</span>
+              <span class="tag" data-val="6">6</span>
+              <span class="tag" data-val="8">8</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">字体风格</label>
+            <select id="t2i-font" class="field-select">
+              <option value="auto">自动匹配</option>
+              <option value="business">商务黑体</option>
+              <option value="serif">文艺宋体</option>
+              <option value="cool">潮酷黑体</option>
+            </select>
+          </div>
+
+          <div class="panel-section">
+            <div class="collapsible-header" id="t2i-prompt-toggle">
+              <span class="panel-label" style="margin:0">自定义提示词</span>
+              <span class="collapsible-arrow">▾</span>
+            </div>
+            <div class="collapsible-body" id="t2i-prompt-body">
+              <textarea id="t2i-prompt" class="field-textarea" style="margin-top:8px" rows="3" placeholder="输入额外提示词（英文效果更佳）..."></textarea>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="progress-wrap" id="t2i-progress">
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="t2i-bar"></div></div>
+              <div class="progress-text" id="t2i-progress-text">准备中...</div>
+            </div>
+            <button class="btn-generate" id="btn-t2i-gen">
+              <span class="spin-icon">↻</span>
+              <span class="btn-text">生 成</span>
+            </button>
+          </div>
+
         </div>
 
-        <!-- 风格选择 -->
-        <div class="form-group">
-          <label class="form-label">拍摄风格</label>
-          <div class="tag-group" id="style-tags">
-            <button class="tag-btn selected" data-val="realistic">写实</button>
-            <button class="tag-btn" data-val="fashion">时尚</button>
-            <button class="tag-btn" data-val="casual">休闲</button>
+        <!-- ══ 批量SKU面板 ══ -->
+        <div id="panel-batchsku" style="display:none;">
+
+          <div class="panel-section">
+            <label class="panel-label">产品图（最多 20 张）</label>
+            <div class="upload-zone" id="sku-upload-zone">
+              <div class="upload-zone-icon">⬆</div>
+              <div class="upload-zone-text">点击或拖拽上传产品图</div>
+              <div class="upload-zone-sub">支持 JPG / PNG / WEBP</div>
+            </div>
+            <div class="upload-thumbs" id="sku-thumbs"></div>
+            <input type="file" id="sku-file-input" multiple accept="image/*" style="display:none">
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">参考图（最多 5 张）</label>
+            <div class="upload-zone" id="ref-upload-zone">
+              <div class="upload-zone-icon">⬆</div>
+              <div class="upload-zone-text">点击或拖拽风格参考图</div>
+              <div class="upload-zone-sub">用于风格迁移参考</div>
+            </div>
+            <div class="upload-thumbs" id="ref-thumbs"></div>
+            <input type="file" id="ref-file-input" multiple accept="image/*" style="display:none">
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">拍摄风格</label>
+            <div class="tag-group" id="sku-style-tags">
+              <span class="tag selected" data-val="写实">写实</span>
+              <span class="tag" data-val="时尚">时尚</span>
+              <span class="tag" data-val="休闲">休闲</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">图片比例</label>
+            <div class="tag-group" id="sku-ratio-tags">
+              <span class="tag selected" data-val="1:1">1:1</span>
+              <span class="tag" data-val="9:16">9:16</span>
+              <span class="tag" data-val="3:4">3:4</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">每图生成数量</label>
+            <div class="tag-group" id="sku-qty-tags">
+              <span class="tag selected" data-val="1">1</span>
+              <span class="tag" data-val="2">2</span>
+              <span class="tag" data-val="4">4</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="progress-wrap" id="sku-progress">
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="sku-bar"></div></div>
+              <div class="progress-text" id="sku-progress-text">准备中...</div>
+            </div>
+            <button class="btn-generate" id="btn-sku-gen">
+              <span class="spin-icon">↻</span>
+              <span class="btn-text">批量生成</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ══ 详情页面板 ══ -->
+        <div id="panel-detail" style="display:none;">
+
+          <div class="panel-section">
+            <label class="panel-label">主商品图</label>
+            <div class="upload-zone" id="detail-main-zone">
+              <div class="upload-zone-icon">⬆</div>
+              <div class="upload-zone-text">上传主商品图</div>
+              <div class="upload-zone-sub">建议 2000px 以上</div>
+            </div>
+            <input type="file" id="detail-main-input" accept="image/*" style="display:none">
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">分屏模块</label>
+            <div class="module-list" id="module-list"></div>
+            <button class="btn-add-module" id="btn-add-module">＋ 添加模块</button>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">全局比例</label>
+            <div class="tag-group" id="detail-ratio-tags">
+              <span class="tag selected" data-val="3:4">3:4</span>
+              <span class="tag" data-val="1:1">1:1</span>
+              <span class="tag" data-val="9:16">9:16</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">分辨率</label>
+            <div class="tag-group" id="detail-res-tags">
+              <span class="tag selected" data-val="2K">2K</span>
+              <span class="tag" data-val="4K">4K</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="progress-wrap" id="detail-progress">
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="detail-bar"></div></div>
+              <div class="progress-text" id="detail-progress-text">准备中...</div>
+            </div>
+            <button class="btn-generate" id="btn-detail-gen">
+              <span class="spin-icon">↻</span>
+              <span class="btn-text">一键全部生成</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ══ 历史记录面板 ══ -->
+        <div id="panel-history" style="display:none;">
+          <div class="panel-section">
+            <label class="panel-label">时间范围</label>
+            <div class="date-tabs">
+              <span class="date-tab active" data-range="today">今日</span>
+              <span class="date-tab" data-range="week">本周</span>
+              <span class="date-tab" data-range="all">全部</span>
+            </div>
+          </div>
+          <div class="panel-section" style="margin-top:8px">
+            <button class="btn-generate" id="btn-history-load" style="height:42px;font-size:var(--text-sm)">
+              <span class="btn-text">加载历史记录</span>
+            </button>
           </div>
         </div>
 
-        <!-- 模型选择 -->
-        <div class="form-group">
-          <label class="form-label">生成模型</label>
-          <select id="model-select" class="form-select">
-            <option value="gpt-image-2">gpt-image-2</option>
-            <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
-            <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-          </select>
+        <!-- ══ 文案生成面板 ══ -->
+        <div id="panel-copywrite" style="display:none;">
+
+          <div class="panel-section">
+            <label class="panel-label">产品名称</label>
+            <input type="text" id="copy-name" class="field-input" placeholder="例：黑色牛皮极简双肩包" />
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">核心特点</label>
+            <input type="text" id="copy-feature" class="field-input" placeholder="例：头层牛皮、15.6寸电脑仓、防水" />
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">参考价格</label>
+            <input type="text" id="copy-price" class="field-input" placeholder="例：299" />
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">发布平台</label>
+            <select id="copy-platform" class="field-select">
+              <option value="taobao">淘宝</option>
+              <option value="jd">京东</option>
+              <option value="pdd">拼多多</option>
+              <option value="douyin">抖音小店</option>
+            </select>
+          </div>
+
+          <div class="panel-section">
+            <label class="panel-label">文案风格</label>
+            <select id="copy-tone" class="field-select">
+              <option value="clean">简洁</option>
+              <option value="emotional">情感</option>
+              <option value="pro">专业</option>
+              <option value="fun">趣味</option>
+            </select>
+          </div>
+
+          <div class="panel-section">
+            <div class="progress-wrap" id="copy-progress">
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="copy-bar"></div></div>
+              <div class="progress-text" id="copy-progress-text">生成中...</div>
+            </div>
+            <button class="btn-generate" id="btn-copy-gen">
+              <span class="spin-icon">↻</span>
+              <span class="btn-text">生成文案</span>
+            </button>
+          </div>
+
         </div>
 
-        <!-- 图片比例 -->
-        <div class="form-group">
-          <label class="form-label">图片比例</label>
-          <div class="tag-group" id="ratio-tags">
-            <button class="tag-btn selected" data-val="1:1">1:1</button>
-            <button class="tag-btn" data-val="9:16">9:16</button>
-            <button class="tag-btn" data-val="16:9">16:9</button>
-            <button class="tag-btn" data-val="3:4">3:4</button>
-          </div>
+      </div><!-- /panel-inner -->
+    </aside>
+
+    <!-- ▌右侧结果区 ▌ -->
+    <main class="result-area">
+
+      <!-- 顶部工具栏 -->
+      <div class="result-topbar">
+        <div class="batch-tabs" id="batchTabs">
+          <button class="batch-tab active" data-batch="0">批次 1</button>
+          <button class="batch-tab-add" id="btnAddBatch" title="新批次">＋</button>
         </div>
-
-        <!-- 生成数量 -->
-        <div class="form-group">
-          <label class="form-label">生成数量</label>
-          <div class="tag-group" id="qty-tags">
-            <button class="tag-btn" data-val="1">1</button>
-            <button class="tag-btn selected" data-val="2">2</button>
-            <button class="tag-btn" data-val="4">4</button>
-            <button class="tag-btn" data-val="6">6</button>
-            <button class="tag-btn" data-val="8">8</button>
-          </div>
+        <div class="col-control">
+          <span class="col-label">列</span>
+          <button class="col-btn" data-cols="2">2</button>
+          <button class="col-btn active" data-cols="3">3</button>
+          <button class="col-btn" data-cols="4">4</button>
         </div>
-
-        <!-- 自定义提示词（可折叠） -->
-        <div class="form-group">
-          <div class="collapsible-header" id="prompt-toggle">
-            <span class="form-label" style="margin:0">自定义提示词 <span style="opacity:.5;font-size:11px">（可选）</span></span>
-            <span class="toggle-icon">▼</span>
-          </div>
-          <div class="collapsible-body" id="prompt-body">
-            <textarea id="custom-prompt" class="form-textarea" placeholder="在此输入额外的画面描述、光线、场景细节…" style="margin-top:8px"></textarea>
-          </div>
-        </div>
-
-        <!-- 进度条 -->
-        <div id="progress-wrap">
-          <div id="progress-label">
-            <span id="progress-text">生成中…</span>
-            <span id="progress-pct">0%</span>
-          </div>
-          <div id="progress-bar-track">
-            <div id="progress-bar-fill"></div>
-          </div>
-        </div>
-
-        <!-- 生成按钮 -->
-        <button id="btn-generate">✦ 开始生成</button>
-
-      </div><!-- /panel-scroll -->
-    </div><!-- /center-panel -->
-
-    <!-- Right Result Area -->
-    <div id="right-area">
-
-      <!-- Batch Tabs -->
-      <div id="batch-tabs-bar">
-        <div class="batch-tab active" data-batch="0">批次 1</div>
-        <button id="btn-new-batch">＋ 新批次</button>
+        <button class="btn-clear" id="btnClear">清空</button>
       </div>
 
-      <!-- Grid Controls -->
-      <div id="grid-controls">
-        <span class="ctrl-label">每行列数：</span>
-        <button class="col-btn" data-cols="2">2</button>
-        <button class="col-btn active" data-cols="3">3</button>
-        <button class="col-btn" data-cols="4">4</button>
-        <button class="col-btn" data-cols="5">5</button>
-        <span id="result-count">共 0 张</span>
-      </div>
-
-      <!-- Scrollable Grid -->
-      <div id="result-scroll">
-        <div id="image-grid">
-          <!-- Empty State -->
-          <div id="empty-state" style="grid-column:1/-1">
-            <div class="empty-icon">✦</div>
-            <div class="empty-title">尚无生成结果</div>
-            <div class="empty-desc">在左侧填写参数后<br>点击「开始生成」即可看到图片</div>
+      <!-- 滚动区 -->
+      <div class="result-scroll" id="resultScroll">
+        <div class="img-grid" id="imgGrid"></div>
+        <div class="copy-result" id="copyResult">
+          <div class="copy-block">
+            <div class="copy-block-label">主标题</div>
+            <div class="copy-block-content" id="cr-title-text">-</div>
+            <div class="copy-block-footer"><button class="btn-copy-text" data-target="cr-title-text">复制</button></div>
           </div>
+          <div class="copy-block">
+            <div class="copy-block-label">卖点列表</div>
+            <div class="copy-block-content" id="cr-bullets-text">-</div>
+            <div class="copy-block-footer"><button class="btn-copy-text" data-target="cr-bullets-text">复制</button></div>
+          </div>
+          <div class="copy-block">
+            <div class="copy-block-label">详情页文案</div>
+            <div class="copy-block-content" id="cr-detail-text">-</div>
+            <div class="copy-block-footer"><button class="btn-copy-text" data-target="cr-detail-text">复制</button></div>
+          </div>
+          <div class="copy-block">
+            <div class="copy-block-label">标签 / 关键词</div>
+            <div class="copy-block-content" id="cr-tags-text">-</div>
+            <div class="copy-block-footer"><button class="btn-copy-text" data-target="cr-tags-text">复制</button></div>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">✦</div>
+          <div class="empty-text">尚无生成结果</div>
         </div>
       </div>
 
-    </div><!-- /right-area -->
-
-  </div><!-- /main-layout -->
-
-  <!-- Lightbox -->
-  <div id="lightbox">
-    <button id="lightbox-close">✕</button>
-    <img id="lightbox-img" src="" alt="预览" />
-  </div>
-
-  <!-- Toast Container -->
-  <div id="toast-container"></div>
+    </main>
+  </div><!-- /workspace -->
+</div><!-- /app -->
 
 <script>
-/* =====================================================
-   AURA App — Main Script
-   ===================================================== */
-
-(async function () {
+(async () => {
   'use strict';
 
-  /* ---- Supabase init ---- */
+  /* ── 0. Auth 验证 ───────────────────────── */
   const sb = window._supabase;
-  if (!sb) {
-    console.error('AURA: Supabase not initialized. Check js/config.js');
-    location.href = '/';
-    return;
-  }
+  let session = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    session = data.session;
+  } catch (e) { console.error('auth error', e); }
+  if (!session) { location.href = '/index.html'; return; }
 
-  /* ---- Auth check ---- */
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) { location.href = '/'; return; }
+  document.getElementById('app').style.display = 'flex';
 
+  /* ── 1. 用户信息 & 用量 ─────────────────── */
   const user = session.user;
+  const displayName = user.user_metadata?.name || user.email?.split('@')[0] || '用户';
+  document.getElementById('userName').textContent = displayName;
 
-  /* ---- DOM refs ---- */
-  const $nickname    = document.getElementById('user-nickname');
-  const $usedCount   = document.getElementById('used-count');
-  const $limitCount  = document.getElementById('limit-count');
-  const $btnLogout   = document.getElementById('btn-logout');
-  const $btnGenerate = document.getElementById('btn-generate');
-  const $keyword     = document.getElementById('input-keyword');
-  const $modelSel    = document.getElementById('model-select');
-  const $customPr    = document.getElementById('custom-prompt');
-  const $progressWrap= document.getElementById('progress-wrap');
-  const $progressFill= document.getElementById('progress-bar-fill');
-  const $progressPct = document.getElementById('progress-pct');
-  const $progressTxt = document.getElementById('progress-text');
-  const $imageGrid   = document.getElementById('image-grid');
-  const $emptyState  = document.getElementById('empty-state');
-  const $resultCount = document.getElementById('result-count');
-  const $batchBar    = document.getElementById('batch-tabs-bar');
-  const $btnNewBatch = document.getElementById('btn-new-batch');
-  const $lightbox    = document.getElementById('lightbox');
-  const $lbImg       = document.getElementById('lightbox-img');
-  const $lbClose     = document.getElementById('lightbox-close');
-
-  /* ---- State ---- */
-  const state = {
-    style: 'realistic',
-    ratio: '1:1',
-    qty: 2,
-    batches: [[]],       // batches[i] = array of image URLs
-    activeBatch: 0,
-    cols: 3,
-    generating: false,
-    usedToday: 0,
-    dailyLimit: 50,
-  };
-
-  /* ---- Init user info ---- */
-  $nickname.textContent = user.user_metadata?.nickname || user.email?.split('@')[0] || '用户';
-  await loadUsage();
-
-  /* ---- Logout ---- */
-  $btnLogout.addEventListener('click', async () => {
-    await sb.auth.signOut();
-    location.href = '/';
-  });
-
-  /* ---- Left nav switching ---- */
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      item.classList.add('active');
-      // Placeholder: module routing would go here
-    });
-  });
-
-  /* ---- Tag groups ---- */
-  function initTagGroup(containerId, stateKey) {
-    const container = document.getElementById(containerId);
-    container.querySelectorAll('.tag-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        container.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        state[stateKey] = btn.dataset.val;
-      });
-    });
-  }
-
-  initTagGroup('style-tags', 'style');
-  initTagGroup('ratio-tags', 'ratio');
-
-  document.getElementById('qty-tags').querySelectorAll('.tag-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.getElementById('qty-tags').querySelectorAll('.tag-btn')
-        .forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      state.qty = parseInt(btn.dataset.val, 10);
-    });
-  });
-
-  /* ---- Collapsible prompt ---- */
-  const $promptToggle = document.getElementById('prompt-toggle');
-  const $promptBody   = document.getElementById('prompt-body');
-  $promptToggle.addEventListener('click', () => {
-    const open = $promptBody.classList.toggle('open');
-    $promptToggle.classList.toggle('open', open);
-  });
-
-  /* ---- Column selector ---- */
-  document.querySelectorAll('.col-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.col-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.cols = parseInt(btn.dataset.cols, 10);
-      $imageGrid.className = '';
-      $imageGrid.id = 'image-grid';
-      if (state.cols !== 3) $imageGrid.classList.add(`cols-${state.cols}`);
-    });
-  });
-
-  /* ---- Batch tabs ---- */
-  function renderBatchTabs() {
-    // Remove all tabs (not the + button)
-    $batchBar.querySelectorAll('.batch-tab').forEach(t => t.remove());
-
-    state.batches.forEach((_, i) => {
-      const tab = document.createElement('div');
-      tab.className = 'batch-tab' + (i === state.activeBatch ? ' active' : '');
-      tab.dataset.batch = i;
-      tab.innerHTML = `批次 ${i + 1}`;
-      if (state.batches.length > 1) {
-        const closeSpan = document.createElement('span');
-        closeSpan.className = 'tab-close';
-        closeSpan.textContent = '×';
-        closeSpan.addEventListener('click', e => {
-          e.stopPropagation();
-          removeBatch(i);
-        });
-        tab.appendChild(closeSpan);
-      }
-      tab.addEventListener('click', () => switchBatch(i));
-      $batchBar.insertBefore(tab, $btnNewBatch);
-    });
-  }
-
-  function switchBatch(i) {
-    state.activeBatch = i;
-    renderBatchTabs();
-    renderGrid();
-  }
-
-  function removeBatch(i) {
-    state.batches.splice(i, 1);
-    if (state.activeBatch >= state.batches.length) {
-      state.activeBatch = state.batches.length - 1;
-    }
-    renderBatchTabs();
-    renderGrid();
-  }
-
-  $btnNewBatch.addEventListener('click', () => {
-    state.batches.push([]);
-    state.activeBatch = state.batches.length - 1;
-    renderBatchTabs();
-    renderGrid();
-  });
-
-  /* ---- Grid rendering ---- */
-  function renderGrid() {
-    const images = state.batches[state.activeBatch] || [];
-    $imageGrid.innerHTML = '';
-
-    if (images.length === 0) {
-      $imageGrid.appendChild($emptyState);
-      $emptyState.style.display = 'flex';
-      $resultCount.textContent = '共 0 张';
-      return;
-    }
-
-    $resultCount.textContent = `共 ${images.length} 张`;
-
-    images.forEach((url, idx) => {
-      const card = document.createElement('div');
-      card.className = 'img-card';
-      card.innerHTML = `
-        <img src="${url}" alt="图片 ${idx + 1}" loading="lazy" />
-        <div class="card-overlay">
-          <span class="card-seq">#${idx + 1}</span>
-          <div class="card-actions">
-            <button class="card-action-btn dl" title="下载">⬇</button>
-            <button class="card-action-btn del" title="删除">🗑</button>
-          </div>
-        </div>
-      `;
-
-      // Lightbox
-      card.querySelector('img').addEventListener('click', () => openLightbox(url));
-
-      // Download
-      card.querySelector('.dl').addEventListener('click', e => {
-        e.stopPropagation();
-        downloadImage(url, `aura_${Date.now()}_${idx + 1}.png`);
-      });
-
-      // Delete
-      card.querySelector('.del').addEventListener('click', e => {
-        e.stopPropagation();
-        state.batches[state.activeBatch].splice(idx, 1);
-        renderGrid();
-      });
-
-      $imageGrid.appendChild(card);
-    });
-  }
-
-  /* ---- Loading skeleton cards ---- */
-  function addSkeletonCards(count) {
-    // Remove empty state if present
-    if ($emptyState.parentNode === $imageGrid) {
-      $imageGrid.removeChild($emptyState);
-    }
-    const skeletons = [];
-    for (let i = 0; i < count; i++) {
-      const card = document.createElement('div');
-      card.className = 'img-card loading';
-      card.innerHTML = `<div class="load-label"><div class="spin"></div><span>生成中</span></div>`;
-      $imageGrid.appendChild(card);
-      skeletons.push(card);
-    }
-    return skeletons;
-  }
-
-  /* ---- Generate ---- */
-  $btnGenerate.addEventListener('click', async () => {
-    if (state.generating) return;
-
-    const keyword = $keyword.value.trim();
-    if (!keyword) { toast('请先输入产品关键词', 'error'); return; }
-
-    if (state.usedToday >= state.dailyLimit) {
-      toast('今日生成次数已达上限', 'error'); return;
-    }
-
-    state.generating = true;
-    $btnGenerate.disabled = true;
-    $progressWrap.classList.add('visible');
-    setProgress(0, '准备中…');
-
-    // Add skeleton cards to current batch grid
-    const skeletons = addSkeletonCards(state.qty);
-    $resultCount.textContent = `共 ${(state.batches[state.activeBatch].length + state.qty)} 张`;
-
-    try {
-      setProgress(15, '发送请求…');
-
-      const body = {
-        keyword,
-        style: state.style,
-        model: $modelSel.value,
-        ratio: state.ratio,
-        qty: state.qty,
-        customPrompt: $customPr.value.trim() || undefined,
-      };
-
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      setProgress(60, '模型生成中…');
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const urls = Array.isArray(data.urls) ? data.urls : (data.url ? [data.url] : []);
-
-      setProgress(90, '加载图片…');
-
-      // Replace skeletons with real images
-      skeletons.forEach((sk, i) => sk.remove());
-
-      urls.forEach(url => {
-        state.batches[state.activeBatch].push(url);
-      });
-
-      setProgress(100, '完成！');
-      state.usedToday += 1;
-      $usedCount.textContent = state.usedToday;
-
-      renderGrid();
-      toast(`成功生成 ${urls.length} 张图片`, 'success');
-
-    } catch (err) {
-      console.error('[AURA] generate error', err);
-      skeletons.forEach(sk => sk.remove());
-      toast('生成失败：' + err.message, 'error');
-      if (state.batches[state.activeBatch].length === 0) renderGrid(); // restore empty state
-    } finally {
-      state.generating = false;
-      $btnGenerate.disabled = false;
-      setTimeout(() => {
-        $progressWrap.classList.remove('visible');
-        setProgress(0, '生成中…');
-      }, 1200);
-    }
-  });
-
-  function setProgress(pct, label) {
-    $progressFill.style.width = pct + '%';
-    $progressPct.textContent = pct + '%';
-    if (label) $progressTxt.textContent = label;
-  }
-
-  /* ---- Usage ---- */
   async function loadUsage() {
     try {
-      const { data, error } = await sb
+      const today = new Date().toISOString().slice(0, 10);
+      const { count } = await sb
         .from('usage_logs')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .gte('created_at', new Date().toISOString().slice(0, 10));
-
-      if (!error) {
-        state.usedToday = data?.length ?? 0;
-        $usedCount.textContent = state.usedToday;
-      }
-
-      // Try fetch limit from profile
-      const { data: profile } = await sb
-        .from('profiles')
-        .select('daily_limit')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.daily_limit) {
-        state.dailyLimit = profile.daily_limit;
-        $limitCount.textContent = profile.daily_limit;
-      }
-    } catch (_) { /* ignore */ }
+        .gte('created_at', today + 'T00:00:00Z');
+      document.getElementById('usageCount').textContent = count ?? 0;
+    } catch (e) { console.warn('usage load failed', e); }
   }
+  loadUsage();
 
-  /* ---- Lightbox ---- */
-  function openLightbox(url) {
-    $lbImg.src = url;
-    $lightbox.classList.add('open');
-  }
-
-  $lbClose.addEventListener('click', () => $lightbox.classList.remove('open'));
-  $lightbox.addEventListener('click', e => {
-    if (e.target === $lightbox) $lightbox.classList.remove('open');
+  /* ── 2. 退出登录 ────────────────────────── */
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.href = '/index.html';
   });
 
-  /* ---- Download ---- */
-  function downloadImage(url, filename) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  /* ── 3. 左侧导航切换 ────────────────────── */
+  const navItems = document.querySelectorAll('.nav-item');
+  const panelMap = {
+    txt2img:   document.getElementById('panel-txt2img'),
+    batchsku:  document.getElementById('panel-batchsku'),
+    detail:    document.getElementById('panel-detail'),
+    history:   document.getElementById('panel-history'),
+    copywrite: document.getElementById('panel-copywrite'),
+  };
+  let currentPanel = 'txt2img';
+  let copyHasContent = false;
+
+  function switchPanel(name) {
+    if (name === currentPanel) return;
+    currentPanel = name;
+    navItems.forEach(el => el.classList.toggle('active', el.dataset.panel === name));
+    Object.entries(panelMap).forEach(([k, el]) => { el.style.display = k === name ? '' : 'none'; });
+    const isCopy = name === 'copywrite';
+    document.getElementById('imgGrid').style.display = isCopy ? 'none' : '';
+    document.getElementById('copyResult').classList.toggle('show', isCopy && copyHasContent);
+    if (name === 'history') loadHistory(document.querySelector('.date-tab.active')?.dataset.range || 'today');
+    checkEmpty();
+  }
+  navItems.forEach(el => el.addEventListener('click', () => switchPanel(el.dataset.panel)));
+
+  /* ── 4. 标签单选工具 ────────────────────── */
+  function bindTagGroup(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', e => {
+      const tag = e.target.closest('.tag');
+      if (!tag) return;
+      el.querySelectorAll('.tag').forEach(t => t.classList.remove('selected'));
+      tag.classList.add('selected');
+    });
+  }
+  function getTagVal(id) {
+    return document.querySelector(`#${id} .tag.selected`)?.dataset.val || '';
+  }
+  ['t2i-style-tags','t2i-ratio-tags','t2i-res-tags','t2i-qty-tags',
+   'sku-style-tags','sku-ratio-tags','sku-qty-tags',
+   'detail-ratio-tags','detail-res-tags'].forEach(bindTagGroup);
+
+  /* ── 5. 折叠提示词 ──────────────────────── */
+  const promptToggle = document.getElementById('t2i-prompt-toggle');
+  const promptBody   = document.getElementById('t2i-prompt-body');
+  promptToggle.addEventListener('click', () => {
+    const open = promptBody.classList.toggle('open');
+    promptToggle.classList.toggle('open', open);
+  });
+
+  /* ── 6. 批次 Tab ────────────────────────── */
+  let batchCount  = 1;
+  let activeBatch = 0;
+  const batchImages = { 0: [] };
+
+  function renderBatchTabs() {
+    const container = document.getElementById('batchTabs');
+    const addBtn    = document.getElementById('btnAddBatch');
+    container.querySelectorAll('.batch-tab').forEach(el => el.remove());
+    for (let i = 0; i < batchCount; i++) {
+      const tab = document.createElement('button');
+      tab.className = 'batch-tab' + (i === activeBatch ? ' active' : '');
+      tab.dataset.batch = i;
+      tab.textContent = `批次 ${i + 1}`;
+      tab.addEventListener('click', () => { activeBatch = i; renderBatchTabs(); renderGrid(); });
+      container.insertBefore(tab, addBtn);
+    }
   }
 
-  /* ---- Toast ---- */
-  function toast(msg, type = 'info') {
-    const $tc = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    el.className = 'toast' + (type !== 'info' ? ` ${type}` : '');
-    el.textContent = msg;
-    $tc.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 2700);
-    setTimeout(() => el.remove(), 3000);
+  document.getElementById('btnAddBatch').addEventListener('click', () => {
+    activeBatch = batchCount;
+    batchImages[activeBatch] = [];
+    batchCount++;
+    renderBatchTabs();
+    renderGrid();
+  });
+
+  /* ── 7. 列数控制 ────────────────────────── */
+  let colCount = 3;
+  document.querySelectorAll('.col-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      colCount = parseInt(btn.dataset.cols);
+      document.querySelectorAll('.col-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const grid = document.getElementById('imgGrid');
+      grid.className = 'img-grid' + (colCount === 2 ? ' cols-2' : colCount === 4 ? ' cols-4' : '');
+    });
+  });
+
+  /* ── 8. 空状态检测 ──────────────────────── */
+  function checkEmpty() {
+    const imgs = batchImages[activeBatch] || [];
+    const isCopy = currentPanel === 'copywrite';
+    const hasContent = imgs.length > 0 || (isCopy && copyHasContent);
+    document.getElementById('emptyState').style.display = hasContent ? 'none' : '';
   }
 
-  /* ---- Initial render ---- */
+  /* ── 9. 图片网格渲染 ────────────────────── */
+  function renderGrid() {
+    const grid = document.getElementById('imgGrid');
+    grid.innerHTML = '';
+    (batchImages[activeBatch] || []).forEach((item, idx) => {
+      const card = document.createElement('div');
+      card.className = 'img-card';
+      card.style.animationDelay = `${idx * 0.05}s`;
+      card.innerHTML = `
+        <img src="${item.url}" alt="生成图 ${idx+1}" loading="lazy" />
+        <span class="img-card-num">${idx + 1}</span>
+        <div class="img-card-overlay">
+          <button class="img-card-btn" data-action="download" data-url="${item.url}" data-idx="${idx}" title="下载">⬇</button>
+          <button class="img-card-btn del" data-action="delete" data-idx="${idx}" title="删除">✕</button>
+        </div>`;
+      grid.appendChild(card);
+    });
+    checkEmpty();
+  }
+
+  document.getElementById('imgGrid').addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (btn.dataset.action === 'delete') {
+      batchImages[activeBatch].splice(idx, 1);
+      renderGrid();
+    } else if (btn.dataset.action === 'download') {
+      const a = document.createElement('a');
+      a.href = btn.dataset.url; a.download = `aura_${Date.now()}_${idx+1}.png`; a.target = '_blank'; a.click();
+    }
+  });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    batchImages[activeBatch] = [];
+    copyHasContent = false;
+    document.getElementById('copyResult').classList.remove('show');
+    renderGrid();
+  });
+
+  /* ── 10. 骨架屏 ─────────────────────────── */
+  function showSkeletons(n) {
+    const grid = document.getElementById('imgGrid');
+    grid.innerHTML = '';
+    grid.style.display = '';
+    for (let i = 0; i < n; i++) {
+      const sk = document.createElement('div');
+      sk.className = 'skeleton skeleton-card';
+      grid.appendChild(sk);
+    }
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('copyResult').classList.remove('show');
+  }
+
+  /* ── 11. API 工具 ───────────────────────── */
+  async function apiPost(path, body) {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(`${res.status}: ${t}`); }
+    return res.json();
+  }
+
+  function setProgress(wrapId, barId, textId, pct, msg) {
+    const wrap = document.getElementById(wrapId);
+    const bar  = document.getElementById(barId);
+    const text = document.getElementById(textId);
+    if (pct === null) { wrap.classList.remove('show'); return; }
+    wrap.classList.add('show');
+    if (bar)  bar.style.width = pct + '%';
+    if (text && msg) text.textContent = msg;
+  }
+
+  function setBtnLoading(btn, loading, originalText) {
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+    if (!loading) btn.querySelector('.btn-text').textContent = originalText;
+  }
+
+  /* ── 12. 文生图 ─────────────────────────── */
+  document.getElementById('btn-t2i-gen').addEventListener('click', async () => {
+    const keyword = document.getElementById('t2i-keyword').value.trim();
+    if (!keyword) { alert('请输入产品关键词'); return; }
+    const qty = parseInt(getTagVal('t2i-qty-tags')) || 4;
+    const btn = document.getElementById('btn-t2i-gen');
+    setBtnLoading(btn, true, '生 成');
+    showSkeletons(qty);
+    setProgress('t2i-progress', 't2i-bar', 't2i-progress-text', 10, '正在连接模型...');
+    try {
+      setProgress('t2i-progress', 't2i-bar', 't2i-progress-text', 35, '正在生成图像...');
+      const data = await apiPost('/api/generate', {
+        keyword,
+        style:      getTagVal('t2i-style-tags'),
+        model:      document.getElementById('t2i-model').value,
+        ratio:      getTagVal('t2i-ratio-tags'),
+        resolution: getTagVal('t2i-res-tags'),
+        qty,
+        font:       document.getElementById('t2i-font').value,
+        prompt:     document.getElementById('t2i-prompt').value.trim(),
+      });
+      setProgress('t2i-progress', 't2i-bar', 't2i-progress-text', 98, '完成');
+      if (!batchImages[activeBatch]) batchImages[activeBatch] = [];
+      (data.urls || []).forEach(url => batchImages[activeBatch].push({ url }));
+      renderGrid();
+      setProgress('t2i-progress', 't2i-bar', 't2i-progress-text', null, '');
+      loadUsage();
+    } catch (err) {
+      console.error(err);
+      alert('生成失败：' + err.message);
+      renderGrid();
+      setProgress('t2i-progress', 't2i-bar', 't2i-progress-text', null, '');
+    } finally { setBtnLoading(btn, false, '生 成'); }
+  });
+
+  /* ── 13. 上传区绑定 ─────────────────────── */
+  function bindUploadZone(zoneId, inputId, thumbsId, maxFiles) {
+    const zone   = document.getElementById(zoneId);
+    const input  = document.getElementById(inputId);
+    const thumbs = thumbsId ? document.getElementById(thumbsId) : null;
+    if (!zone || !input) return;
+    let files = [];
+
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handle([...e.dataTransfer.files]); });
+    input.addEventListener('change', () => handle([...input.files]));
+
+    function handle(newFiles) {
+      newFiles = newFiles.filter(f => f.type.startsWith('image/'));
+      files = [...files, ...newFiles].slice(0, maxFiles);
+      if (thumbs) {
+        thumbs.innerHTML = '';
+        files.forEach(f => {
+          const img = document.createElement('img');
+          img.className = 'upload-thumb';
+          img.src = URL.createObjectURL(f);
+          thumbs.appendChild(img);
+        });
+      } else if (files[0]) {
+        const img = zone.querySelector('img') || document.createElement('img');
+        img.src = URL.createObjectURL(files[0]);
+        img.style.cssText = 'width:100%;height:80px;object-fit:cover;border-radius:6px;margin-top:8px';
+        if (!zone.querySelector('img')) zone.appendChild(img);
+      }
+      input._files = files;
+    }
+  }
+  bindUploadZone('sku-upload-zone', 'sku-file-input', 'sku-thumbs', 20);
+  bindUploadZone('ref-upload-zone', 'ref-file-input', 'ref-thumbs', 5);
+  bindUploadZone('detail-main-zone', 'detail-main-input', null, 1);
+
+  /* ── 14. 批量SKU 生成 ───────────────────── */
+  function fileToBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('btn-sku-gen').addEventListener('click', async () => {
+    const fileInput = document.getElementById('sku-file-input');
+    const files = fileInput._files || [];
+    if (!files.length) { alert('请先上传产品图'); return; }
+    const qty   = parseInt(getTagVal('sku-qty-tags')) || 1;
+    const total = files.length;
+    const btn   = document.getElementById('btn-sku-gen');
+    setBtnLoading(btn, true, '批量生成');
+    showSkeletons(total * qty);
+    setProgress('sku-progress', 'sku-bar', 'sku-progress-text', 0, `第 0 / ${total} 张...`);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        setProgress('sku-progress', 'sku-bar', 'sku-progress-text', Math.round((i/total)*100), `第 ${i+1} / ${total} 张生成中...`);
+        const b64  = await fileToBase64(files[i]);
+        const data = await apiPost('/api/generate', { imageBase64: b64, style: getTagVal('sku-style-tags'), ratio: getTagVal('sku-ratio-tags'), qty });
+        if (!batchImages[activeBatch]) batchImages[activeBatch] = [];
+        (data.urls || []).forEach(url => batchImages[activeBatch].push({ url }));
+      }
+      renderGrid();
+      setProgress('sku-progress', 'sku-bar', 'sku-progress-text', null, '');
+      loadUsage();
+    } catch (err) {
+      console.error(err);
+      alert('批量生成出错：' + err.message);
+      renderGrid();
+      setProgress('sku-progress', 'sku-bar', 'sku-progress-text', null, '');
+    } finally { setBtnLoading(btn, false, '批量生成'); }
+  });
+
+  /* ── 15. 详情页模块管理 ─────────────────── */
+  const PRESET_MODULES = ['首屏主视觉','核心卖点','材质细节','使用场景','产品细节','信任背书'];
+  let modules = [...PRESET_MODULES];
+
+  function renderModules() {
+    const list = document.getElementById('module-list');
+    list.innerHTML = '';
+    modules.forEach((name, idx) => {
+      const item = document.createElement('div');
+      item.className = 'module-item';
+      item.innerHTML = `
+        <div class="module-item-header">
+          <span class="module-name">${name}</span>
+          <button class="btn-module-del" data-idx="${idx}" title="删除">✕</button>
+        </div>
+        <input type="text" class="field-input" style="font-size:12px;padding:6px 10px"
+               placeholder="补充关键词（选填）" data-module="${idx}" />`;
+      list.appendChild(item);
+    });
+  }
+  renderModules();
+
+  document.getElementById('module-list').addEventListener('click', e => {
+    const del = e.target.closest('.btn-module-del');
+    if (del) { modules.splice(parseInt(del.dataset.idx), 1); renderModules(); }
+  });
+  document.getElementById('btn-add-module').addEventListener('click', () => {
+    const name = prompt('请输入模块名称：');
+    if (name?.trim()) { modules.push(name.trim()); renderModules(); }
+  });
+
+  /* ── 16. 详情页全部生成 ─────────────────── */
+  document.getElementById('btn-detail-gen').addEventListener('click', async () => {
+    if (!modules.length) { alert('请至少添加一个模块'); return; }
+    const ratio      = getTagVal('detail-ratio-tags');
+    const resolution = getTagVal('detail-res-tags');
+    const total = modules.length;
+    const btn   = document.getElementById('btn-detail-gen');
+    setBtnLoading(btn, true, '一键全部生成');
+    showSkeletons(total);
+    setProgress('detail-progress', 'detail-bar', 'detail-progress-text', 0, `第 0 / ${total} 模块...`);
+    try {
+      const inputs = document.querySelectorAll('#module-list input[data-module]');
+      for (let i = 0; i < modules.length; i++) {
+        const pct  = Math.round((i / total) * 100);
+        setProgress('detail-progress', 'detail-bar', 'detail-progress-text', pct, `生成「${modules[i]}」(${i+1}/${total})...`);
+        const extra = inputs[i]?.value.trim() || '';
+        const data  = await apiPost('/api/generate', {
+          keyword: `${modules[i]} ${extra}`.trim(), ratio, resolution, qty: 1, style: '写实',
+        });
+        if (!batchImages[activeBatch]) batchImages[activeBatch] = [];
+        (data.urls || []).forEach(url => batchImages[activeBatch].push({ url }));
+      }
+      renderGrid();
+      setProgress('detail-progress', 'detail-bar', 'detail-progress-text', null, '');
+      loadUsage();
+    } catch (err) {
+      console.error(err);
+      alert('详情页生成出错：' + err.message);
+      renderGrid();
+      setProgress('detail-progress', 'detail-bar', 'detail-progress-text', null, '');
+    } finally { setBtnLoading(btn, false, '一键全部生成'); }
+  });
+
+  /* ── 17. 历史记录 ───────────────────────── */
+  document.querySelectorAll('.date-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  async function loadHistory(range) {
+    document.getElementById('imgGrid').style.display = '';
+    document.getElementById('copyResult').classList.remove('show');
+    showSkeletons(6);
+    try {
+      let query = sb.from('usage_logs')
+        .select('image_urls, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(60);
+      if (range === 'today') {
+        query = query.gte('created_at', new Date().toISOString().slice(0,10) + 'T00:00:00Z');
+      } else if (range === 'week') {
+        query = query.gte('created_at', new Date(Date.now() - 7*864e5).toISOString());
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      batchImages[activeBatch] = [];
+      (data || []).forEach(row => {
+        const urls = Array.isArray(row.image_urls) ? row.image_urls : (row.image_urls ? [row.image_urls] : []);
+        urls.forEach(url => batchImages[activeBatch].push({ url }));
+      });
+      renderGrid();
+    } catch (err) {
+      console.error(err);
+      document.getElementById('imgGrid').innerHTML = '';
+      checkEmpty();
+      alert('历史记录加载失败：' + err.message);
+    }
+  }
+
+  document.getElementById('btn-history-load').addEventListener('click', () => {
+    loadHistory(document.querySelector('.date-tab.active')?.dataset.range || 'today');
+  });
+
+  /* ── 18. 文案生成 ───────────────────────── */
+  document.getElementById('btn-copy-gen').addEventListener('click', async () => {
+    const name = document.getElementById('copy-name').value.trim();
+    if (!name) { alert('请输入产品名称'); return; }
+    const btn = document.getElementById('btn-copy-gen');
+    setBtnLoading(btn, true, '生成文案');
+    setProgress('copy-progress', 'copy-bar', 'copy-progress-text', 40, '正在生成文案...');
+    document.getElementById('imgGrid').style.display = 'none';
+    document.getElementById('copyResult').classList.remove('show');
+    document.getElementById('emptyState').style.display = 'none';
+    try {
+      const data = await apiPost('/api/copy', {
+        name,
+        feature:  document.getElementById('copy-feature').value.trim(),
+        price:    document.getElementById('copy-price').value.trim(),
+        platform: document.getElementById('copy-platform').value,
+        tone:     document.getElementById('copy-tone').value,
+      });
+      setProgress('copy-progress', 'copy-bar', 'copy-progress-text', 98, '完成');
+      document.getElementById('cr-title-text').textContent   = data.title   || '-';
+      document.getElementById('cr-bullets-text').textContent = Array.isArray(data.bullets) ? data.bullets.join('\n') : (data.bullets || '-');
+      document.getElementById('cr-detail-text').textContent  = data.detail  || '-';
+      document.getElementById('cr-tags-text').textContent    = Array.isArray(data.tags) ? data.tags.join('  ') : (data.tags || '-');
+      copyHasContent = true;
+      document.getElementById('copyResult').classList.add('show');
+      setProgress('copy-progress', 'copy-bar', 'copy-progress-text', null, '');
+      loadUsage();
+    } catch (err) {
+      console.error(err);
+      alert('文案生成失败：' + err.message);
+      document.getElementById('imgGrid').style.display = '';
+      setProgress('copy-progress', 'copy-bar', 'copy-progress-text', null, '');
+      checkEmpty();
+    } finally { setBtnLoading(btn, false, '生成文案'); }
+  });
+
+  /* ── 19. 复制文案 ───────────────────────── */
+  document.getElementById('copyResult').addEventListener('click', e => {
+    const btn = e.target.closest('.btn-copy-text');
+    if (!btn) return;
+    const text = document.getElementById(btn.dataset.target)?.textContent || '';
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '已复制 ✓';
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    }).catch(() => { alert('复制失败，请手动选取'); });
+  });
+
+  /* ── 20. 初始化 ─────────────────────────── */
   renderBatchTabs();
   renderGrid();
 

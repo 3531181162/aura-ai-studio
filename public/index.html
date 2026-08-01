@@ -6,372 +6,694 @@
 <title>AURA · AI电商视觉工作台</title>
 <link rel="stylesheet" href="css/style.css">
 <style>
-/* ── 登录页专属样式 ── */
+/* ================================================================
+   登录页专属样式 — AURA AI VISUAL STUDIO
+   纯黑科技大厂感 / OpenAI · Apple · ByteDance 调性
+   ================================================================ */
+
 body { overflow: hidden; }
 
-.login-bg {
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(201,169,110,.08) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 80% 100%, rgba(201,169,110,.05) 0%, transparent 60%),
-    var(--bg-0);
+/* ── 背景层 ── */
+.page-bg {
+  position: fixed; inset: 0; z-index: 0;
+  background: #000000;
 }
 
-/* 动态线条背景 */
-.grid-lines {
-  position: fixed; inset: 0; pointer-events: none;
+/* 网格线 — 极细 */
+.grid-overlay {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background-image:
-    linear-gradient(rgba(201,169,110,.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201,169,110,.04) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+  animation: grid-scroll 20s linear infinite;
+}
+@keyframes grid-scroll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 80px; }
 }
 
-/* 中心容器 */
+/* 顶部扫描线 */
+.scanline {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(201,169,110,0.6) 40%,
+    rgba(201,169,110,0.9) 50%,
+    rgba(201,169,110,0.6) 60%,
+    transparent 100%);
+  animation: scan 4s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(201,169,110,0.5), 0 0 24px rgba(201,169,110,0.2);
+}
+@keyframes scan {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* 右下角金色光晕 */
+.corner-glow {
+  position: fixed; bottom: -80px; right: -80px; z-index: 1;
+  width: 500px; height: 500px; border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(201,169,110,0.12) 0%,
+    rgba(201,169,110,0.04) 40%,
+    transparent 70%);
+  animation: glow-pulse 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes glow-pulse {
+  0%, 100% { transform: scale(1);   opacity: 0.7; }
+  50%       { transform: scale(1.15); opacity: 1;   }
+}
+
+/* ── 整体布局 ── */
 .login-wrap {
   position: relative; z-index: 10;
   min-height: 100vh;
   display: flex;
 }
 
-/* 左侧品牌区 */
+/* ================================================================
+   左侧品牌区 — 60%
+   ================================================================ */
 .brand-side {
-  flex: 1;
+  flex: 0 0 60%;
   display: flex; flex-direction: column;
   justify-content: center; align-items: flex-start;
-  padding: 80px;
-  position: relative;
+  padding: 0 80px 0 100px;
+  position: relative; overflow: hidden;
+  animation: slide-in-left 0.9s cubic-bezier(.16,1,.3,1) both;
 }
-.brand-eyebrow {
-  font-size: .75rem; font-weight: 600;
-  color: var(--gold);
-  letter-spacing: .2em; text-transform: uppercase;
-  margin-bottom: 20px;
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* 顶部 AURA logo */
+.brand-logo {
+  position: absolute; top: 48px; left: 100px;
   display: flex; align-items: center; gap: 10px;
 }
-.brand-eyebrow::before {
-  content: '';
-  width: 32px; height: 1px;
-  background: var(--gold);
+.brand-logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #a8854a, #C9A96E, #dfc28d);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #000;
+  box-shadow: 0 0 16px rgba(201,169,110,0.35);
+  flex-shrink: 0;
 }
+.brand-logo-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem; font-weight: 700;
+  color: #dfc28d; letter-spacing: 0.05em;
+}
+
+/* 品牌内容区 */
+.brand-content { max-width: 560px; }
+
+/* 小标签 */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.28em; text-transform: uppercase;
+  margin-bottom: 28px;
+  opacity: 0;
+  animation: fade-up 0.7s 0.3s cubic-bezier(.16,1,.3,1) forwards;
+}
+.eyebrow-line {
+  width: 28px; height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+/* 大标题 */
 .brand-title {
   font-family: 'Playfair Display', serif;
-  font-size: clamp(2.5rem, 4vw, 3.8rem);
+  font-size: clamp(2.8rem, 4.2vw, 4rem);
   font-weight: 700;
-  line-height: 1.15;
-  color: var(--text-1);
-  margin-bottom: 20px;
+  line-height: 1.12;
+  color: #ffffff;
+  margin-bottom: 24px;
 }
-.brand-title span {
-  background: linear-gradient(135deg, var(--gold-dk), var(--gold), var(--gold-lt));
+.brand-title .line-1 {
+  display: block;
+  opacity: 0;
+  animation: fade-up 0.7s 0.45s cubic-bezier(.16,1,.3,1) forwards;
+}
+.brand-title .line-2 {
+  display: block;
+  background: linear-gradient(135deg, #a8854a 0%, #C9A96E 40%, #dfc28d 70%, #C9A96E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  opacity: 0;
+  animation: fade-up 0.7s 0.6s cubic-bezier(.16,1,.3,1) forwards;
+  background-size: 200% 100%;
+  animation: fade-up 0.7s 0.6s cubic-bezier(.16,1,.3,1) forwards,
+             shimmer 4s 1.5s linear infinite;
 }
+.brand-title .line-3 {
+  display: block;
+  opacity: 0;
+  animation: fade-up 0.7s 0.75s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* 副标题 */
 .brand-desc {
-  font-size: 1.05rem; color: var(--text-2); line-height: 1.8;
-  max-width: 440px; margin-bottom: 40px;
+  font-size: 0.95rem; color: var(--text-secondary);
+  line-height: 1.85; max-width: 440px;
+  margin-bottom: 44px;
+  opacity: 0;
+  animation: fade-up 0.7s 0.9s cubic-bezier(.16,1,.3,1) forwards;
 }
+
+/* 功能列表 */
 .brand-features {
-  display: flex; flex-direction: column; gap: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+  opacity: 0;
+  animation: fade-up 0.7s 1.05s cubic-bezier(.16,1,.3,1) forwards;
 }
 .brand-feat {
-  display: flex; align-items: center; gap: 12px;
-  font-size: .9rem; color: var(--text-2);
+  display: flex; align-items: center; gap: 14px;
+  font-size: 0.88rem; color: var(--text-secondary);
+  transition: color var(--transition);
 }
+.brand-feat:hover { color: var(--text-primary); }
 .feat-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--gold); flex-shrink: 0;
-  box-shadow: 0 0 8px var(--gold);
+  box-shadow: 0 0 10px rgba(201,169,110,0.8), 0 0 20px rgba(201,169,110,0.3);
+}
+.feat-text strong {
+  color: rgba(255,255,255,0.85); font-weight: 500;
 }
 
-/* 右侧登录卡片 */
-.login-side {
-  width: 440px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  padding: 40px;
-  background: rgba(14,12,18,.6);
-  backdrop-filter: blur(20px);
-  border-left: 1px solid var(--gold-bdr2);
-}
-.login-card {
-  width: 100%; max-width: 360px;
-}
-.login-logo {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 36px;
-}
-.logo-icon {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 0 20px rgba(201,169,110,.3);
-}
-.logo-text {
+/* 装饰水印数字 */
+.watermark {
+  position: absolute; bottom: 40px; right: -20px;
   font-family: 'Playfair Display', serif;
-  font-size: 1.5rem; font-weight: 700;
-  color: var(--gold-lt);
+  font-size: 18rem; font-weight: 700; line-height: 1;
+  color: rgba(201,169,110,0.025);
+  pointer-events: none; user-select: none;
+  letter-spacing: -0.05em;
 }
-.logo-sub { font-size: .75rem; color: var(--text-3); }
 
-.login-heading {
-  font-size: 1.3rem; font-weight: 600;
-  color: var(--text-1); margin-bottom: 6px;
+/* 装饰光球 */
+.orb {
+  position: absolute; border-radius: 50%; pointer-events: none;
 }
-.login-subheading { font-size: .88rem; color: var(--text-3); margin-bottom: 28px; }
+.orb-1 {
+  width: 360px; height: 360px; top: 5%; left: -60px;
+  background: radial-gradient(circle, rgba(201,169,110,0.06) 0%, transparent 70%);
+  animation: orb-float 10s ease-in-out infinite;
+}
+.orb-2 {
+  width: 220px; height: 220px; bottom: 15%; left: 40%;
+  background: radial-gradient(circle, rgba(201,169,110,0.04) 0%, transparent 70%);
+  animation: orb-float 13s 2s ease-in-out infinite reverse;
+}
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-24px) scale(1.05); }
+}
+
+/* ================================================================
+   右侧登录卡片区 — 40%，毛玻璃
+   ================================================================ */
+.login-side {
+  flex: 0 0 40%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 48px;
+  background: rgba(8,8,8,0.80);
+  backdrop-filter: blur(24px) saturate(120%);
+  border-left: 1px solid rgba(201,169,110,0.10);
+  position: relative;
+  animation: slide-in-right 0.9s 0.1s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.login-card {
+  width: 100%; max-width: 380px;
+}
+
+/* 卡片顶部 logo */
+.card-logo {
+  display: flex; align-items: center; gap: 11px;
+  margin-bottom: 40px;
+}
+.card-logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, #a8854a, #C9A96E, #dfc28d);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #000;
+  box-shadow: 0 0 20px rgba(201,169,110,0.30), 0 4px 12px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+.card-logo-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; font-weight: 700;
+  color: #dfc28d; letter-spacing: 0.05em;
+  line-height: 1;
+}
+.card-logo-sub {
+  font-size: 0.72rem; color: var(--text-muted);
+  letter-spacing: 0.05em; margin-top: 3px;
+}
+
+/* 欢迎标题 */
+.card-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px; letter-spacing: -0.01em;
+}
+.card-subheading {
+  font-size: 0.875rem; color: var(--text-muted);
+  margin-bottom: 28px;
+}
 
 /* Tab 切换 */
 .auth-tabs {
-  display: flex; gap: 0;
-  background: var(--bg-1);
-  border-radius: var(--radius-sm);
-  padding: 3px;
+  display: flex;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 3px; gap: 3px;
   margin-bottom: 24px;
 }
 .auth-tab {
-  flex: 1; padding: 8px;
+  flex: 1; padding: 9px 16px;
   border: none; background: transparent;
   border-radius: 6px;
-  color: var(--text-3); font-size: .88rem; font-weight: 500;
-  cursor: pointer; transition: var(--trans);
-  font-family: inherit;
+  color: var(--text-muted);
+  font-size: 0.875rem; font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-body);
+  letter-spacing: 0.03em;
+}
+.auth-tab:hover:not(.active) {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
 }
 .auth-tab.active {
-  background: var(--bg-3);
+  background: linear-gradient(135deg, rgba(168,133,74,0.25), rgba(201,169,110,0.15));
   color: var(--gold);
+  border: 1px solid rgba(201,169,110,0.2);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.4);
 }
 
-/* 分隔线 */
-.divider {
-  display: flex; align-items: center; gap: 12px;
-  font-size: .78rem; color: var(--text-3);
-  margin: 20px 0;
-}
-.divider::before, .divider::after {
-  content: ''; flex: 1; height: 1px;
-  background: var(--gold-bdr2);
-}
-
-.login-footer {
-  margin-top: 24px;
-  font-size: .78rem; color: var(--text-3);
-  text-align: center; line-height: 1.8;
-}
-.login-footer a { color: var(--gold); text-decoration: none; }
-
-/* 错误提示 */
+/* 提示框 */
 .alert {
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  font-size: .85rem;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  font-size: 0.84rem; line-height: 1.5;
   margin-bottom: 16px;
   display: none;
 }
-.alert-error { background: rgba(224,80,80,.1); border: 1px solid rgba(224,80,80,.2); color: var(--red); }
-.alert-success { background: rgba(80,200,120,.1); border: 1px solid rgba(80,200,120,.2); color: var(--green); }
-
-/* 装饰光圈 */
-.orb {
-  position: absolute; border-radius: 50%; pointer-events: none;
-  animation: pulse-orb 8s ease-in-out infinite;
+.alert-error {
+  background: rgba(255,59,48,0.08);
+  border: 1px solid rgba(255,59,48,0.20);
+  color: #ff6b6b;
 }
-.orb-1 {
-  width: 300px; height: 300px;
-  background: radial-gradient(circle, rgba(201,169,110,.07), transparent 70%);
-  top: 10%; left: 10%;
-  animation-delay: 0s;
-}
-.orb-2 {
-  width: 200px; height: 200px;
-  background: radial-gradient(circle, rgba(201,169,110,.05), transparent 70%);
-  bottom: 20%; right: 30%;
-  animation-delay: 3s;
-}
-@keyframes pulse-orb {
-  0%, 100% { transform: scale(1); opacity: .6; }
-  50% { transform: scale(1.2); opacity: 1; }
+.alert-success {
+  background: rgba(52,199,89,0.08);
+  border: 1px solid rgba(52,199,89,0.20);
+  color: #4cd964;
 }
 
-@media (max-width: 900px) {
+/* 表单字段 */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-size: 0.8rem; font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 7px;
+  letter-spacing: 0.03em;
+}
+.input {
+  display: block; width: 100%;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+  -webkit-appearance: none;
+}
+.input::placeholder { color: var(--text-muted); }
+.input:hover {
+  border-color: var(--border-strong);
+  background: rgba(255,255,255,0.04);
+}
+.input:focus {
+  border-color: rgba(201,169,110,0.5);
+  background: rgba(201,169,110,0.04);
+  box-shadow: 0 0 0 3px rgba(201,169,110,0.08);
+}
+
+/* 金色按钮 */
+.btn-submit {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; padding: 13px 24px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #a8854a 0%, #C9A96E 50%, #dfc28d 100%);
+  background-size: 200% 100%;
+  border: none; border-radius: var(--radius-md);
+  color: #000000;
+  font-size: 0.9rem; font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+  position: relative; overflow: hidden;
+  box-shadow: 0 2px 16px rgba(201,169,110,0.25), 0 1px 4px rgba(0,0,0,0.4);
+}
+.btn-submit::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  opacity: 0; transition: opacity var(--transition);
+}
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(201,169,110,0.4), 0 2px 8px rgba(0,0,0,0.5);
+  background-position: 100% 0;
+}
+.btn-submit:hover::after { opacity: 1; }
+.btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 12px rgba(201,169,110,0.25);
+}
+.btn-submit:disabled {
+  opacity: 0.55; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+.btn-submit .btn-icon {
+  margin-left: 8px; font-size: 1rem;
+  transition: transform var(--transition);
+}
+.btn-submit:hover .btn-icon { transform: translateX(3px); }
+
+/* 页脚 */
+.card-footer {
+  margin-top: 22px;
+  font-size: 0.76rem; color: var(--text-muted);
+  text-align: center; line-height: 1.9;
+}
+.card-footer a {
+  color: rgba(201,169,110,0.7);
+  transition: color var(--transition);
+}
+.card-footer a:hover { color: var(--gold); }
+
+/* ── 响应式 ── */
+@media (max-width: 960px) {
   .brand-side { display: none; }
-  .login-side { width: 100%; border-left: none; }
+  .login-side {
+    flex: 0 0 100%;
+    border-left: none;
+    background: #000;
+    backdrop-filter: none;
+  }
+}
+@media (max-width: 480px) {
+  .login-side { padding: 32px 24px; }
 }
 </style>
 </head>
 <body>
 
-<div class="login-bg"></div>
-<div class="grid-lines"></div>
+<!-- ── 背景层 ── -->
+<div class="page-bg"></div>
+<div class="grid-overlay"></div>
+<div class="scanline"></div>
+<div class="corner-glow"></div>
 
-<!-- 粒子背景 -->
-<div class="particles-bg" id="particles"></div>
-
+<!-- ── 主布局 ── -->
 <div class="login-wrap">
 
-  <!-- 左侧品牌 -->
+  <!-- ════════ 左侧品牌区 ════════ -->
   <div class="brand-side">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
 
-    <div class="brand-eyebrow">AI Visual Studio</div>
-
-    <h1 class="brand-title">
-      电商视觉<br>
-      <span>智能创作</span><br>
-      工作台
-    </h1>
-
-    <p class="brand-desc">
-      一站式 AI 驱动的电商图片生成平台，<br>
-      模特图、场景图、主图文案，一键生成。
-    </p>
-
-    <div class="brand-features">
-      <div class="brand-feat"><div class="feat-dot"></div>AI模特图生成，输入关键词秒出效果</div>
-      <div class="brand-feat"><div class="feat-dot"></div>产品图智能换背景，多场景一键切换</div>
-      <div class="brand-feat"><div class="feat-dot"></div>电商文案自动生成，标题卖点全覆盖</div>
-      <div class="brand-feat"><div class="feat-dot"></div>批量SKU处理，提升10倍工作效率</div>
-      <div class="brand-feat"><div class="feat-dot"></div>团队协作管理，用量实时可视化</div>
+    <!-- 顶部 logo -->
+    <div class="brand-logo">
+      <div class="brand-logo-icon">✦</div>
+      <div class="brand-logo-text">AURA</div>
     </div>
+
+    <!-- 核心内容 -->
+    <div class="brand-content">
+
+      <div class="eyebrow">
+        <span class="eyebrow-line"></span>
+        AI VISUAL STUDIO
+      </div>
+
+      <h1 class="brand-title">
+        <span class="line-1">电商视觉</span>
+        <span class="line-2">AI驱动</span>
+        <span class="line-3">一体化工作台</span>
+      </h1>
+
+      <p class="brand-desc">
+        一站式 AI 驱动的电商视觉生产平台，<br>
+        从模特图到详情页，从主图到文案，<br>
+        全链路智能生成，重塑创作效率。
+      </p>
+
+      <div class="brand-features">
+        <div class="brand-feat">
+          <div class="feat-dot"></div>
+          <div class="feat-text">
+            <strong>AI模特图生成</strong>，秒出商业级效果
+          </div>
+        </div>
+        <div class="brand-feat">
+          <div class="feat-dot"></div>
+          <div class="feat-text">
+            <strong>批量SKU处理</strong>，效率提升10倍
+          </div>
+        </div>
+        <div class="brand-feat">
+          <div class="feat-dot"></div>
+          <div class="feat-text">
+            <strong>详情页一键生成</strong>，分屏结构自动排版
+          </div>
+        </div>
+        <div class="brand-feat">
+          <div class="feat-dot"></div>
+          <div class="feat-text">
+            <strong>电商文案智能生成</strong>，多平台适配
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 装饰水印 -->
+    <div class="watermark">04</div>
   </div>
 
-  <!-- 右侧登录 -->
+  <!-- ════════ 右侧登录区 ════════ -->
   <div class="login-side">
     <div class="login-card">
 
-      <div class="login-logo">
-        <div class="logo-icon">✦</div>
+      <!-- 卡片 logo -->
+      <div class="card-logo">
+        <div class="card-logo-icon">✦</div>
         <div>
-          <div class="logo-text">AURA</div>
-          <div class="logo-sub">AI电商视觉工作台</div>
+          <div class="card-logo-text">AURA</div>
+          <div class="card-logo-sub">AI 电商视觉工作台</div>
         </div>
       </div>
 
-      <h2 class="login-heading">欢迎回来</h2>
-      <p class="login-subheading">登录您的账号，开始创作</p>
+      <h2 class="card-heading">欢迎回来</h2>
+      <p class="card-subheading">登录您的账号，开始创作</p>
 
-      <!-- Tab -->
+      <!-- Tab 切换 -->
       <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchTab('login')">登 录</button>
-        <button class="auth-tab" onclick="switchTab('register')">注 册</button>
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">登 录</button>
+        <button class="auth-tab" id="tab-register" onclick="switchTab('register')">注 册</button>
       </div>
 
-      <!-- 提示 -->
-      <div class="alert alert-error" id="alert-msg"></div>
+      <!-- 全局提示 -->
+      <div class="alert" id="alert-msg"></div>
 
-      <!-- 登录表单 -->
-      <form id="login-form" onsubmit="handleLogin(event)">
+      <!-- ── 登录表单 ── -->
+      <form id="login-form" onsubmit="handleLogin(event)" autocomplete="on">
         <div class="form-group">
-          <label>邮箱地址</label>
-          <input class="input" type="email" id="login-email" placeholder="your@email.com" required>
+          <label for="login-email">邮箱地址</label>
+          <input class="input" type="email" id="login-email"
+                 placeholder="your@email.com" required autocomplete="email">
         </div>
         <div class="form-group">
-          <label>密码</label>
-          <input class="input" type="password" id="login-pwd" placeholder="••••••••" required>
+          <label for="login-pwd">密码</label>
+          <input class="input" type="password" id="login-pwd"
+                 placeholder="••••••••" required autocomplete="current-password">
         </div>
-        <button class="btn btn-gold btn-lg btn-block" type="submit" id="login-btn">
-          <span>登录工作台</span>
+        <button class="btn-submit" type="submit" id="login-btn">
+          <span id="login-btn-text">登录工作台</span>
+          <span class="btn-icon">→</span>
         </button>
       </form>
 
-      <!-- 注册表单 -->
-      <form id="register-form" style="display:none" onsubmit="handleRegister(event)">
+      <!-- ── 注册表单 ── -->
+      <form id="register-form" style="display:none" onsubmit="handleRegister(event)" autocomplete="on">
         <div class="form-group">
-          <label>姓名 / 昵称</label>
-          <input class="input" type="text" id="reg-name" placeholder="你的名字" required>
+          <label for="reg-name">姓名 / 昵称</label>
+          <input class="input" type="text" id="reg-name"
+                 placeholder="你的名字" required autocomplete="name">
         </div>
         <div class="form-group">
-          <label>邮箱地址</label>
-          <input class="input" type="email" id="reg-email" placeholder="your@email.com" required>
+          <label for="reg-email">邮箱地址</label>
+          <input class="input" type="email" id="reg-email"
+                 placeholder="your@email.com" required autocomplete="email">
         </div>
         <div class="form-group">
-          <label>设置密码</label>
-          <input class="input" type="password" id="reg-pwd" placeholder="至少8位" required minlength="8">
+          <label for="reg-pwd">设置密码</label>
+          <input class="input" type="password" id="reg-pwd"
+                 placeholder="至少8位" required minlength="8" autocomplete="new-password">
         </div>
         <div class="form-group">
-          <label>邀请码（必填）</label>
-          <input class="input" type="text" id="reg-code" placeholder="联系管理员获取" required>
+          <label for="reg-code">邀请码（必填）</label>
+          <input class="input" type="text" id="reg-code"
+                 placeholder="联系管理员获取" required autocomplete="off">
         </div>
-        <button class="btn btn-gold btn-lg btn-block" type="submit" id="reg-btn">
-          <span>创建账号</span>
+        <button class="btn-submit" type="submit" id="reg-btn">
+          <span id="reg-btn-text">创建账号</span>
+          <span class="btn-icon">→</span>
         </button>
       </form>
 
-      <div class="login-footer">
+      <div class="card-footer">
         使用即代表同意 <a href="#">服务条款</a> 与 <a href="#">隐私政策</a><br>
         如有问题请联系管理员
       </div>
 
     </div>
   </div>
-</div>
+
+</div><!-- /login-wrap -->
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
 <script>
-// ── 粒子生成 ──
-(function() {
-  const container = document.getElementById('particles');
-  for (let i = 0; i < 20; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    p.style.cssText = `
-      left: ${Math.random()*100}%;
-      width: ${Math.random()*3+1}px;
-      height: ${Math.random()*3+1}px;
-      animation-duration: ${Math.random()*15+10}s;
-      animation-delay: ${Math.random()*10}s;
-      opacity: ${Math.random()*.4+.1};
-    `;
-    container.appendChild(p);
-  }
-})();
+/* ================================================================
+   AURA 登录页交互逻辑
+   ================================================================ */
 
-// ── Tab 切换 ──
-function switchTab(tab) {
-  const tabs = document.querySelectorAll('.auth-tab');
-  tabs[0].classList.toggle('active', tab === 'login');
-  tabs[1].classList.toggle('active', tab === 'register');
-  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
-  document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
-  clearAlert();
-}
-
-function showAlert(msg, type='error') {
+// ── 工具函数 ──────────────────────────────────────────────────
+function showAlert(msg, type = 'error') {
   const el = document.getElementById('alert-msg');
   el.textContent = msg;
-  el.className = `alert alert-${type}`;
+  el.className = 'alert alert-' + type;
   el.style.display = 'block';
 }
 function clearAlert() {
-  document.getElementById('alert-msg').style.display = 'none';
-}
-function setLoading(btnId, loading, text='') {
-  const btn = document.getElementById(btnId);
-  btn.disabled = loading;
-  btn.querySelector('span').textContent = loading ? '请稍候...' : text;
+  const el = document.getElementById('alert-msg');
+  el.style.display = 'none';
+  el.className = 'alert';
 }
 
-// ── 登录 ──
+function setLoading(formType, loading) {
+  if (formType === 'login') {
+    const btn = document.getElementById('login-btn');
+    const txt = document.getElementById('login-btn-text');
+    btn.disabled = loading;
+    txt.textContent = loading ? '正在登录...' : '登录工作台';
+  } else {
+    const btn = document.getElementById('reg-btn');
+    const txt = document.getElementById('reg-btn-text');
+    btn.disabled = loading;
+    txt.textContent = loading ? '正在注册...' : '创建账号';
+  }
+}
+
+function translateError(msg) {
+  const map = {
+    'Invalid login credentials': '邮箱或密码错误，请重试',
+    'Email not confirmed': '请先验证您的邮箱',
+    'User already registered': '该邮箱已注册，请直接登录',
+    'Password should be at least 6 characters': '密码至少需要6位',
+  };
+  return map[msg] || msg;
+}
+
+// ── Tab 切换 ──────────────────────────────────────────────────
+function switchTab(tab) {
+  const loginForm = document.getElementById('login-form');
+  const regForm   = document.getElementById('register-form');
+  const tabLogin  = document.getElementById('tab-login');
+  const tabReg    = document.getElementById('tab-register');
+
+  clearAlert();
+
+  if (tab === 'login') {
+    loginForm.style.display = '';
+    regForm.style.display   = 'none';
+    tabLogin.classList.add('active');
+    tabReg.classList.remove('active');
+    document.querySelector('.card-heading').textContent = '欢迎回来';
+    document.querySelector('.card-subheading').textContent = '登录您的账号，开始创作';
+  } else {
+    loginForm.style.display = 'none';
+    regForm.style.display   = '';
+    tabLogin.classList.remove('active');
+    tabReg.classList.add('active');
+    document.querySelector('.card-heading').textContent = '创建账号';
+    document.querySelector('.card-subheading').textContent = '填写信息完成注册';
+  }
+}
+
+// ── 登录 ──────────────────────────────────────────────────────
 async function handleLogin(e) {
   e.preventDefault();
   clearAlert();
-  const email = document.getElementById('login-email').value.trim();
-  const pwd   = document.getElementById('login-pwd').value;
-  setLoading('login-btn', true);
+
+  const sb       = window._supabase;
+  if (!sb) { showAlert('服务初始化失败，请刷新页面'); return; }
+
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pwd').value;
+  setLoading('login', true);
 
   try {
-    const { data, error } = await window._supabase.auth.signInWithPassword({ email, password: pwd });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
 
-    // 检查账号是否被禁用
-    const { data: profile } = await window._supabase
-      .from('profiles').select('role,is_active').eq('id', data.user.id).single();
+    // 检查 profile 角色与状态
+    const { data: profile, error: pErr } = await sb
+      .from('profiles')
+      .select('role, is_active')
+      .eq('id', data.user.id)
+      .single();
 
-    if (profile && !profile.is_active) {
-      await window._supabase.auth.signOut();
+    if (pErr && pErr.code !== 'PGRST116') {
+      console.warn('获取 profile 失败', pErr);
+    }
+
+    if (profile && profile.is_active === false) {
+      await sb.auth.signOut();
       throw new Error('账号已被停用，请联系管理员');
     }
 
@@ -381,57 +703,86 @@ async function handleLogin(e) {
     } else {
       window.location.href = '/app.html';
     }
-  } catch(err) {
-    showAlert(err.message === 'Invalid login credentials' ? '邮箱或密码错误' : err.message);
-    setLoading('login-btn', false, '登录工作台');
+  } catch (err) {
+    showAlert(translateError(err.message));
+    setLoading('login', false);
   }
 }
 
-// ── 注册 ──
+// ── 注册 ──────────────────────────────────────────────────────
 async function handleRegister(e) {
   e.preventDefault();
   clearAlert();
+
+  const sb   = window._supabase;
+  if (!sb) { showAlert('服务初始化失败，请刷新页面'); return; }
+
   const name  = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const pwd   = document.getElementById('reg-pwd').value;
-  const code  = document.getElementById('reg-code').value.trim();
-  setLoading('reg-btn', true);
+  const code  = document.getElementById('reg-code').value.trim().toUpperCase();
+  setLoading('register', true);
 
   try {
-    // 验证邀请码
-    const { data: codeData } = await window._supabase
-      .from('invite_codes').select('*').eq('code', code).eq('used', false).single();
-    if (!codeData) throw new Error('邀请码无效或已使用');
+    // 1. 验证邀请码
+    const { data: codeRow, error: codeErr } = await sb
+      .from('invite_codes')
+      .select('*')
+      .eq('code', code)
+      .eq('used', false)
+      .single();
 
-    // 创建账号
-    const { data, error } = await window._supabase.auth.signUp({ email, password: pwd });
-    if (error) throw error;
+    if (codeErr || !codeRow) {
+      throw new Error('邀请码无效或已使用，请联系管理员获取');
+    }
 
-    // 创建 profile
-    await window._supabase.from('profiles').insert({
-      id: data.user.id, email, nickname: name,
-      role: 'user', is_active: true, daily_limit: 20
+    // 2. 注册账号
+    const { data, error: signUpErr } = await sb.auth.signUp({ email, password: pwd });
+    if (signUpErr) throw signUpErr;
+
+    const userId = data.user?.id;
+    if (!userId) throw new Error('注册失败，请重试');
+
+    // 3. 创建 profile 记录
+    const { error: profileErr } = await sb.from('profiles').insert({
+      id:          userId,
+      email:       email,
+      nickname:    name,
+      role:        'user',
+      is_active:   true,
+      daily_limit: 20,
     });
+    if (profileErr) console.warn('创建 profile 失败', profileErr);
 
-    // 标记邀请码已使用
-    await window._supabase.from('invite_codes').update({ used: true, used_by: data.user.id }).eq('code', code);
+    // 4. 标记邀请码已使用
+    await sb.from('invite_codes')
+      .update({ used: true, used_by: userId })
+      .eq('code', code);
 
-    showAlert('注册成功！请查收验证邮件后登录', 'success');
-    setTimeout(() => switchTab('login'), 2000);
-  } catch(err) {
-    showAlert(err.message);
-    setLoading('reg-btn', false, '创建账号');
+    showAlert('注册成功！请查收验证邮件，确认后即可登录', 'success');
+    setTimeout(() => switchTab('login'), 2500);
+  } catch (err) {
+    showAlert(translateError(err.message));
+    setLoading('register', false);
   }
 }
 
-// ── 检查是否已登录 ──
-(async function() {
-  if (!window._supabase) return;
-  const { data } = await window._supabase.auth.getSession();
-  if (data.session) {
-    const { data: profile } = await window._supabase
-      .from('profiles').select('role').eq('id', data.session.user.id).single();
+// ── 检查是否已登录（页面加载时） ─────────────────────────────
+(async function checkSession() {
+  const sb = window._supabase;
+  if (!sb) return;
+
+  try {
+    const { data } = await sb.auth.getSession();
+    if (!data.session) return;
+
+    const uid = data.session.user.id;
+    const { data: profile } = await sb
+      .from('profiles').select('role').eq('id', uid).single();
+
     window.location.href = profile?.role === 'admin' ? '/admin.html' : '/app.html';
+  } catch (err) {
+    console.warn('会话检查失败', err);
   }
 })();
 </script>
