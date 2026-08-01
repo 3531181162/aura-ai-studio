@@ -37,9 +37,18 @@ module.exports = async function handler(req, res) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return res.status(401).json({ error: '未授权，请重新登录' });
 
+  // 用 REST API 直接验证 token（兼容新版 Supabase key 格式）
+  const authCheck = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'apikey': SUPABASE_KEY,
+    }
+  });
+  if (!authCheck.ok) return res.status(401).json({ error: '登录已过期，请重新登录' });
+  const user = await authCheck.json();
+  if (!user?.id) return res.status(401).json({ error: '用户信息获取失败' });
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) return res.status(401).json({ error: '登录已过期，请重新登录' });
 
   // ── 2. 查用户权限 ──
   const { data: profile } = await supabase
