@@ -894,15 +894,12 @@
   'use strict';
 
   /* ---- Supabase init ---- */
-  const { createClient } = window.supabase || {};
-  if (!createClient) { location.href = '/'; return; }
-
-  const sbUrl  = window.SUPABASE_URL  || '';
-  const sbKey  = window.SUPABASE_ANON_KEY || '';
-  if (!sbUrl || !sbKey) {
-    console.error('AURA: Supabase config missing. Check js/config.js');
+  const sb = window._supabase;
+  if (!sb) {
+    console.error('AURA: Supabase not initialized. Check js/config.js');
+    location.href = '/';
+    return;
   }
-  const sb = createClient(sbUrl, sbKey);
 
   /* ---- Auth check ---- */
   const { data: { session } } = await sb.auth.getSession();
