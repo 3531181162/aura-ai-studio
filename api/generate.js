@@ -3,28 +3,22 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL  = process.env.SUPABASE_URL;
-const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;
 const SUPABASE_ANON = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SVC  = process.env.SUPABASE_SERVICE_KEY;
 const API_BASE      = process.env.AI_API_BASE || 'https://api.weelinking.com';
 const AI_API_KEY    = process.env.AI_API_KEY;
 
-// 比例 → 尺寸映射
 const RATIO_SIZE = {
-  '1:1':  '1024x1024',
-  '9:16': '1024x1792',
-  '16:9': '1792x1024',
-  '3:4':  '768x1024',
-  '4:3':  '1024x768',
+  '1:1': '1024x1024', '9:16': '1024x1792',
+  '16:9': '1792x1024', '3:4': '768x1024', '4:3': '1024x768',
 };
-
-// 风格 → 英文 prompt 关键词
 const STYLE_MAP = {
-  '写实':   'photorealistic, professional studio lighting, high resolution, commercial photography',
-  'realistic': 'photorealistic, professional studio lighting, high resolution, commercial photography',
-  '时尚':   'fashion photography, vogue editorial style, dramatic lighting, high fashion',
-  'fashion': 'fashion photography, vogue editorial style, dramatic lighting, high fashion',
-  '休闲':   'casual lifestyle photography, natural daylight, relaxed and natural',
-  'casual':  'casual lifestyle photography, natural daylight, relaxed and natural',
+  '写实': 'photorealistic, professional studio lighting, high resolution',
+  'realistic': 'photorealistic, professional studio lighting, high resolution',
+  '时尚': 'fashion photography, vogue editorial style, dramatic lighting',
+  'fashion': 'fashion photography, vogue editorial style, dramatic lighting',
+  '休闲': 'casual lifestyle photography, natural daylight, relaxed',
+  'casual': 'casual lifestyle photography, natural daylight, relaxed',
 };
 
 module.exports = async function handler(req, res) {
@@ -38,29 +32,31 @@ module.exports = async function handler(req, res) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim();
   if (!token) return res.status(401).json({ error: '未授权，请重新登录' });
 
-  // 用 anon key 验证用户 token
-  const authCheck = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'apikey': SUPABASE_ANON,
-    }
+  // 用 anon client 验证用户 session token
+  const sbUser = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { autoRefreshToken: false, persistSession: false }
   });
-  if (!authCheck.ok) return res.status(401).json({ error: '登录已过期，请重新登录' });
-  const user = await authCheck.json();
-  if (!user?.id) return res.status(401).json({ error: '用户信息获取失败' });
+  const { data: userData, error: authErr } = await sbUser.auth.getUser(token);
+  if (authErr || !userData?.user) {
+    return res.status(401).json({ error: '登录已过期，请重新登录', detail: authErr?.message });
+  }
+  const user = userData.user;
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  // ── 2. 用 service client 查用户权限 ──
+  const sbSvc = createClient(SUPABASE_URL, SUPABASE_SVC, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
 
-  // ── 2. 查用户权限 ──
-  const { data: profile } = await supabase
+  const { data: profile } = await sbSvc
     .from('profiles').select('daily_limit,is_active,role').eq('id', user.id).single();
 
   if (!profile || !profile.is_active)
     return res.status(403).json({ error: '账号已停用，请联系管理员' });
 
   const today = new Date().toISOString().split('T')[0];
-  const { data: usageRows } = await supabase
-    .from('usage_logs').select('count').eq('user_id', user.id).gte('created_at', today + 'T00:00:00Z');
+  const { data: usageRows } = await sbSvc
+    .from('usage_logs').select('count').eq('user_id', user.id)
+    .gte('created_at', today + 'T00:00:00Z');
 
   const usedToday = (usageRows || []).reduce((s, r) => s + (r.count || 0), 0);
   const limit = profile.daily_limit || 20;
@@ -68,7 +64,7 @@ module.exports = async function handler(req, res) {
   if (usedToday >= limit && profile.role !== 'admin')
     return res.status(429).json({ error: `今日生成已达上限（${limit}张）` });
 
-  // ── 3. 解析参数（兼容两种字段名）──
+  // ── 3. 解析参数 ──
   const body = req.body || {};
   const keyword      = body.keyword || body.prompt || '';
   const customPrompt = body.customPrompt || '';
@@ -82,11 +78,9 @@ module.exports = async function handler(req, res) {
 
   const styleDesc = STYLE_MAP[style] || STYLE_MAP['realistic'];
   const prompt = customPrompt ||
-    `Young Asian female model wearing ${keyword}. Full body product shot, white background, ${styleDesc}, 8K resolution, e-commerce main image.`;
-
+    `Young Asian female model wearing ${keyword}. Full body product shot, white background, ${styleDesc}, 8K, e-commerce.`;
   const size = RATIO_SIZE[ratio] || '1024x1024';
   const n = Math.min(Math.max(count, 1), 8);
-
   const allowedModels = ['gpt-image-2', 'gemini-3-pro-image-preview', 'gemini-3.1-flash-image-preview'];
   const safeModel = allowedModels.includes(model) ? model : 'gpt-image-2';
 
@@ -128,20 +122,14 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: `生成失败：${errors[0] || '请检查API配置'}` });
 
   // ── 5. 记录用量 ──
-  await supabase.from('usage_logs').insert({
-    user_id: user.id,
-    model: safeModel,
-    count: urls.length,
-    prompt: prompt.slice(0, 200),
+  await sbSvc.from('usage_logs').insert({
+    user_id: user.id, model: safeModel,
+    count: urls.length, prompt: prompt.slice(0, 200),
     created_at: new Date().toISOString(),
   });
 
-  // 返回 urls 数组（app.html 期望的格式）
   return res.status(200).json({
-    urls,
-    generated: urls.length,
-    failed: errors.length,
-    used_today: usedToday + urls.length,
-    limit,
+    urls, generated: urls.length, failed: errors.length,
+    used_today: usedToday + urls.length, limit,
   });
 };
