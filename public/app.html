@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AURA · AI电商视觉工作台</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-0, #07060A);
+      color: var(--text-1, #F5F0E8);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== Top Nav ===== */
+    #top-nav {
+      height: 56px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+      background: rgba(7,6,10,0.95);
+      border-bottom: 1px solid rgba(201,169,110,0.18);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    #top-nav .logo {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, var(--gold, #C9A96E), var(--gold-lt, #E8D5A3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      flex-shrink: 0;
+    }
+
+    #top-nav .logo span {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 1px;
+      margin-left: 8px;
+      opacity: 0.6;
+      -webkit-text-fill-color: var(--gold-lt, #E8D5A3);
+      vertical-align: middle;
+    }
+
+    #top-nav .spacer { flex: 1; }
+
+    #top-nav .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    #top-nav .user-nickname {
+      color: var(--gold-lt, #E8D5A3);
+      font-weight: 500;
+    }
+
+    #top-nav .usage-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(201,169,110,0.12);
+      border: 1px solid rgba(201,169,110,0.3);
+      color: var(--gold, #C9A96E);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    #top-nav .usage-badge .used { color: var(--gold-lt, #E8D5A3); font-weight: 600; }
+
+    #btn-logout {
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(201,169,110,0.35);
+      background: transparent;
+      color: var(--gold, #C9A96E);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #btn-logout:hover {
+      background: rgba(201,169,110,0.1);
+      border-color: var(--gold, #C9A96E);
+    }
+
+    /* ===== Main Layout ===== */
+    #main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ===== Left Sidebar ===== */
+    #left-nav {
+      width: 200px;
+      flex-shrink: 0;
+      background: #0D0C11;
+      border-right: 1px solid rgba(201,169,110,0.10);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 0;
+      gap: 4px;
+      overflow-y: auto;
+    }
+
+    .nav-section-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: rgba(245,240,232,0.3);
+      padding: 8px 20px 4px;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: 0;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      border-left: 3px solid transparent;
+      color: rgba(245,240,232,0.6);
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .nav-item:hover {
+      background: rgba(201,169,110,0.07);
+      color: var(--gold-lt, #E8D5A3);
+    }
+
+    .nav-item.active {
+      background: rgba(201,169,110,0.12);
+      border-left-color: var(--gold, #C9A96E);
+      color: var(--gold-lt, #E8D5A3);
+    }
+
+    .nav-item .nav-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+
+    .nav-item .nav-label { font-size: 13px; }
+
+    .nav-divider {
+      height: 1px;
+      background: rgba(201,169,110,0.08);
+      margin: 8px 16px;
+    }
+
+    /* ===== Center Panel ===== */
+    #center-panel {
+      width: 320px;
+      flex-shrink: 0;
+      background: #0A0910;
+      border-right: 1px solid rgba(201,169,110,0.10);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #center-panel .panel-title {
+      padding: 16px 20px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold, #C9A96E);
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(201,169,110,0.10);
+      flex-shrink: 0;
+    }
+
+    #center-panel .panel-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #center-panel .panel-scroll::-webkit-scrollbar { width: 4px; }
+    #center-panel .panel-scroll::-webkit-scrollbar-track { background: transparent; }
+    #center-panel .panel-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); border-radius: 2px; }
+
+    /* Form Groups */
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+
+    .form-label {
+      font-size: 12px;
+      color: rgba(245,240,232,0.5);
+      letter-spacing: 0.5px;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,169,110,0.18);
+      border-radius: 8px;
+      color: var(--text-1, #F5F0E8);
+      font-size: 13px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      border-color: rgba(201,169,110,0.5);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder {
+      color: rgba(245,240,232,0.25);
+    }
+
+    .form-select {
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23C9A96E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .form-select option {
+      background: #12101A;
+      color: var(--text-1, #F5F0E8);
+    }
+
+    .form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+    /* Tag Groups */
+    .tag-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(201,169,110,0.2);
+      background: rgba(255,255,255,0.03);
+      color: rgba(245,240,232,0.55);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .tag-btn:hover {
+      border-color: rgba(201,169,110,0.45);
+      color: var(--gold-lt, #E8D5A3);
+    }
+
+    .tag-btn.selected {
+      border-color: var(--gold, #C9A96E);
+      background: rgba(201,169,110,0.15);
+      color: var(--gold-lt, #E8D5A3);
+      font-weight: 500;
+    }
+
+    /* Collapsible */
+    .collapsible-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .collapsible-header .toggle-icon {
+      font-size: 12px;
+      color: rgba(201,169,110,0.5);
+      transition: transform 0.2s;
+    }
+
+    .collapsible-header.open .toggle-icon { transform: rotate(180deg); }
+
+    .collapsible-body {
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+      max-height: 0;
+    }
+
+    .collapsible-body.open { max-height: 200px; }
+
+    /* Generate Button */
+    #btn-generate {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #C9A96E 0%, #E8D5A3 50%, #C9A96E 100%);
+      background-size: 200% 200%;
+      color: #07060A;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #btn-generate:hover {
+      background-position: right center;
+      box-shadow: 0 4px 20px rgba(201,169,110,0.35);
+      transform: translateY(-1px);
+    }
+
+    #btn-generate:active { transform: translateY(0); }
+
+    #btn-generate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Progress Bar */
+    #progress-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    #progress-wrap.visible { display: flex; }
+
+    #progress-label {
+      font-size: 12px;
+      color: var(--gold, #C9A96E);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #progress-bar-track {
+      height: 4px;
+      background: rgba(201,169,110,0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #C9A96E, #E8D5A3);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* ===== Right Result Area ===== */
+    #right-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-0, #07060A);
+    }
+
+    /* Batch Tabs */
+    #batch-tabs-bar {
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 4px;
+      border-bottom: 1px solid rgba(201,169,110,0.10);
+      background: rgba(7,6,10,0.8);
+      flex-shrink: 0;
+      min-height: 44px;
+      overflow-x: auto;
+    }
+
+    #batch-tabs-bar::-webkit-scrollbar { height: 2px; }
+    #batch-tabs-bar::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); }
+
+    .batch-tab {
+      padding: 8px 16px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid transparent;
+      border-bottom: none;
+      cursor: pointer;
+      font-size: 13px;
+      color: rgba(245,240,232,0.45);
+      white-space: nowrap;
+      transition: all 0.15s;
+      user-select: none;
+      position: relative;
+      top: 1px;
+    }
+
+    .batch-tab:hover { color: var(--gold-lt, #E8D5A3); }
+
+    .batch-tab.active {
+      background: rgba(201,169,110,0.10);
+      border-color: rgba(201,169,110,0.18);
+      border-bottom-color: #07060A;
+      color: var(--gold, #C9A96E);
+      font-weight: 500;
+    }
+
+    .batch-tab .tab-close {
+      margin-left: 6px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      font-size: 12px;
+    }
+
+    .batch-tab:hover .tab-close { opacity: 0.6; }
+    .batch-tab .tab-close:hover { opacity: 1; color: #ff6b6b; }
+
+    #btn-new-batch {
+      padding: 5px 12px;
+      border-radius: 5px;
+      border: 1px dashed rgba(201,169,110,0.25);
+      background: transparent;
+      color: rgba(201,169,110,0.5);
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      margin-left: 4px;
+    }
+
+    #btn-new-batch:hover {
+      border-color: var(--gold, #C9A96E);
+      color: var(--gold, #C9A96E);
+    }
+
+    /* Grid Controls */
+    #grid-controls {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      gap: 12px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(201,169,110,0.06);
+    }
+
+    #grid-controls .ctrl-label {
+      font-size: 12px;
+      color: rgba(245,240,232,0.35);
+    }
+
+    .col-btn {
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(201,169,110,0.15);
+      background: transparent;
+      color: rgba(245,240,232,0.4);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .col-btn.active,
+    .col-btn:hover {
+      border-color: rgba(201,169,110,0.4);
+      color: var(--gold, #C9A96E);
+      background: rgba(201,169,110,0.06);
+    }
+
+    #result-count {
+      margin-left: auto;
+      font-size: 12px;
+      color: rgba(245,240,232,0.3);
+    }
+
+    /* Image Grid */
+    #result-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    #result-scroll::-webkit-scrollbar { width: 5px; }
+    #result-scroll::-webkit-scrollbar-track { background: transparent; }
+    #result-scroll::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.15); border-radius: 3px; }
+
+    #image-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    #image-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    #image-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    #image-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+    /* Empty State */
+    #empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 16px;
+      color: rgba(245,240,232,0.2);
+    }
+
+    #empty-state .empty-icon {
+      font-size: 56px;
+      opacity: 0.4;
+    }
+
+    #empty-state .empty-title {
+      font-size: 16px;
+      color: rgba(245,240,232,0.35);
+    }
+
+    #empty-state .empty-desc {
+      font-size: 13px;
+      color: rgba(245,240,232,0.2);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    /* Image Card */
+    .img-card {
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(201,169,110,0.10);
+      position: relative;
+      aspect-ratio: 1 / 1;
+      transition: border-color 0.2s, transform 0.2s;
+      cursor: pointer;
+    }
+
+    .img-card:hover {
+      border-color: rgba(201,169,110,0.3);
+      transform: translateY(-2px);
+    }
+
+    .img-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .img-card .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(7,6,10,0.55) 0%, transparent 35%, transparent 65%, rgba(7,6,10,0.7) 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px;
+    }
+
+    .img-card:hover .card-overlay { opacity: 1; }
+
+    .card-seq {
+      font-size: 11px;
+      color: var(--gold, #C9A96E);
+      font-weight: 600;
+      background: rgba(7,6,10,0.6);
+      padding: 2px 7px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .card-action-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid rgba(201,169,110,0.3);
+      background: rgba(7,6,10,0.7);
+      color: var(--gold-lt, #E8D5A3);
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .card-action-btn:hover { background: rgba(201,169,110,0.2); border-color: var(--gold, #C9A96E); }
+    .card-action-btn.del:hover { background: rgba(255,80,80,0.2); border-color: rgba(255,80,80,0.5); color: #ff6b6b; }
+
+    /* Loading skeleton */
+    .img-card.loading {
+      background: linear-gradient(90deg, rgba(201,169,110,0.05) 25%, rgba(201,169,110,0.1) 50%, rgba(201,169,110,0.05) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .img-card.loading .load-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: rgba(201,169,110,0.4);
+      font-size: 13px;
+    }
+
+    .spin {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      border: 2px solid rgba(201,169,110,0.15);
+      border-top-color: var(--gold, #C9A96E);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+
+    .toast {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: rgba(20,18,28,0.95);
+      border: 1px solid rgba(201,169,110,0.2);
+      color: var(--text-1, #F5F0E8);
+      backdrop-filter: blur(8px);
+      animation: toast-in 0.25s ease;
+      max-width: 300px;
+    }
+
+    .toast.success { border-color: rgba(100,200,100,0.3); color: #90ee90; }
+    .toast.error { border-color: rgba(255,80,80,0.3); color: #ff9090; }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Image Lightbox */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(7,6,10,0.92);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+
+    #lightbox.open { display: flex; }
+
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      border: 1px solid rgba(201,169,110,0.2);
+      object-fit: contain;
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      font-size: 28px;
+      color: rgba(245,240,232,0.6);
+      cursor: pointer;
+      background: none;
+      border: none;
+      line-height: 1;
+    }
+    #lightbox-close:hover { color: var(--text-1, #F5F0E8); }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Top Navigation ===== -->
+  <nav id="top-nav">
+    <div class="logo">AURA<span>AI 视觉工作台</span></div>
+    <div class="spacer"></div>
+    <div class="user-info">
+      <span class="user-nickname" id="user-nickname">加载中…</span>
+      <span class="usage-badge">今日已用 <span class="used" id="used-count">0</span> / <span id="limit-count">50</span></span>
+      <button id="btn-logout">退出</button>
+    </div>
+  </nav>
+
+  <!-- ===== Main Layout ===== -->
+  <div id="main-layout">
+
+    <!-- Left Sidebar -->
+    <nav id="left-nav">
+      <div class="nav-section-label">生成工具</div>
+      <div class="nav-item active" data-module="model-gen">
+        <span class="nav-icon">🧍</span>
+        <span class="nav-label">模特图生成</span>
+      </div>
+      <div class="nav-item" data-module="bg-swap">
+        <span class="nav-icon">🖼️</span>
+        <span class="nav-label">换背景</span>
+      </div>
+      <div class="nav-item" data-module="copywriting">
+        <span class="nav-icon">✍️</span>
+        <span class="nav-label">文案生成</span>
+      </div>
+      <div class="nav-item" data-module="batch-sku">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">批量 SKU</span>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">记录</div>
+      <div class="nav-item" data-module="history">
+        <span class="nav-icon">🕓</span>
+        <span class="nav-label">历史记录</span>
+      </div>
+    </nav>
+
+    <!-- Center Panel -->
+    <div id="center-panel">
+      <div class="panel-title">⚙ 参数配置</div>
+      <div class="panel-scroll">
+
+        <!-- 产品关键词 -->
+        <div class="form-group">
+          <label class="form-label">产品关键词</label>
+          <input id="input-keyword" class="form-input" type="text" placeholder="例：白色连衣裙、牛皮手提包…" />
+        </div>
+
+        <!-- 风格选择 -->
+        <div class="form-group">
+          <label class="form-label">拍摄风格</label>
+          <div class="tag-group" id="style-tags">
+            <button class="tag-btn selected" data-val="realistic">写实</button>
+            <button class="tag-btn" data-val="fashion">时尚</button>
+            <button class="tag-btn" data-val="casual">休闲</button>
+          </div>
+        </div>
+
+        <!-- 模型选择 -->
+        <div class="form-group">
+          <label class="form-label">生成模型</label>
+          <select id="model-select" class="form-select">
+            <option value="gpt-image-2">gpt-image-2</option>
+            <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
+            <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
+          </select>
+        </div>
+
+        <!-- 图片比例 -->
+        <div class="form-group">
+          <label class="form-label">图片比例</label>
+          <div class="tag-group" id="ratio-tags">
+            <button class="tag-btn selected" data-val="1:1">1:1</button>
+            <button class="tag-btn" data-val="9:16">9:16</button>
+            <button class="tag-btn" data-val="16:9">16:9</button>
+            <button class="tag-btn" data-val="3:4">3:4</button>
+          </div>
+        </div>
+
+        <!-- 生成数量 -->
+        <div class="form-group">
+          <label class="form-label">生成数量</label>
+          <div class="tag-group" id="qty-tags">
+            <button class="tag-btn" data-val="1">1</button>
+            <button class="tag-btn selected" data-val="2">2</button>
+            <button class="tag-btn" data-val="4">4</button>
+            <button class="tag-btn" data-val="6">6</button>
+            <button class="tag-btn" data-val="8">8</button>
+          </div>
+        </div>
+
+        <!-- 自定义提示词（可折叠） -->
+        <div class="form-group">
+          <div class="collapsible-header" id="prompt-toggle">
+            <span class="form-label" style="margin:0">自定义提示词 <span style="opacity:.5;font-size:11px">（可选）</span></span>
+            <span class="toggle-icon">▼</span>
+          </div>
+          <div class="collapsible-body" id="prompt-body">
+            <textarea id="custom-prompt" class="form-textarea" placeholder="在此输入额外的画面描述、光线、场景细节…" style="margin-top:8px"></textarea>
+          </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div id="progress-wrap">
+          <div id="progress-label">
+            <span id="progress-text">生成中…</span>
+            <span id="progress-pct">0%</span>
+          </div>
+          <div id="progress-bar-track">
+            <div id="progress-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- 生成按钮 -->
+        <button id="btn-generate">✦ 开始生成</button>
+
+      </div><!-- /panel-scroll -->
+    </div><!-- /center-panel -->
+
+    <!-- Right Result Area -->
+    <div id="right-area">
+
+      <!-- Batch Tabs -->
+      <div id="batch-tabs-bar">
+        <div class="batch-tab active" data-batch="0">批次 1</div>
+        <button id="btn-new-batch">＋ 新批次</button>
+      </div>
+
+      <!-- Grid Controls -->
+      <div id="grid-controls">
+        <span class="ctrl-label">每行列数：</span>
+        <button class="col-btn" data-cols="2">2</button>
+        <button class="col-btn active" data-cols="3">3</button>
+        <button class="col-btn" data-cols="4">4</button>
+        <button class="col-btn" data-cols="5">5</button>
+        <span id="result-count">共 0 张</span>
+      </div>
+
+      <!-- Scrollable Grid -->
+      <div id="result-scroll">
+        <div id="image-grid">
+          <!-- Empty State -->
+          <div id="empty-state" style="grid-column:1/-1">
+            <div class="empty-icon">✦</div>
+            <div class="empty-title">尚无生成结果</div>
+            <div class="empty-desc">在左侧填写参数后<br>点击「开始生成」即可看到图片</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-area -->
+
+  </div><!-- /main-layout -->
+
+  <!-- Lightbox -->
+  <div id="lightbox">
+    <button id="lightbox-close">✕</button>
+    <img id="lightbox-img" src="" alt="预览" />
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+<script>
+/* =====================================================
+   AURA App — Main Script
+   ===================================================== */
+
+(async function () {
+  'use strict';
+
+  /* ---- Supabase init ---- */
+  const { createClient } = window.supabase || {};
+  if (!createClient) { location.href = '/'; return; }
+
+  const sbUrl  = window.SUPABASE_URL  || '';
+  const sbKey  = window.SUPABASE_ANON_KEY || '';
+  if (!sbUrl || !sbKey) {
+    console.error('AURA: Supabase config missing. Check js/config.js');
+  }
+  const sb = createClient(sbUrl, sbKey);
+
+  /* ---- Auth check ---- */
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = '/'; return; }
+
+  const user = session.user;
+
+  /* ---- DOM refs ---- */
+  const $nickname    = document.getElementById('user-nickname');
+  const $usedCount   = document.getElementById('used-count');
+  const $limitCount  = document.getElementById('limit-count');
+  const $btnLogout   = document.getElementById('btn-logout');
+  const $btnGenerate = document.getElementById('btn-generate');
+  const $keyword     = document.getElementById('input-keyword');
+  const $modelSel    = document.getElementById('model-select');
+  const $customPr    = document.getElementById('custom-prompt');
+  const $progressWrap= document.getElementById('progress-wrap');
+  const $progressFill= document.getElementById('progress-bar-fill');
+  const $progressPct = document.getElementById('progress-pct');
+  const $progressTxt = document.getElementById('progress-text');
+  const $imageGrid   = document.getElementById('image-grid');
+  const $emptyState  = document.getElementById('empty-state');
+  const $resultCount = document.getElementById('result-count');
+  const $batchBar    = document.getElementById('batch-tabs-bar');
+  const $btnNewBatch = document.getElementById('btn-new-batch');
+  const $lightbox    = document.getElementById('lightbox');
+  const $lbImg       = document.getElementById('lightbox-img');
+  const $lbClose     = document.getElementById('lightbox-close');
+
+  /* ---- State ---- */
+  const state = {
+    style: 'realistic',
+    ratio: '1:1',
+    qty: 2,
+    batches: [[]],       // batches[i] = array of image URLs
+    activeBatch: 0,
+    cols: 3,
+    generating: false,
+    usedToday: 0,
+    dailyLimit: 50,
+  };
+
+  /* ---- Init user info ---- */
+  $nickname.textContent = user.user_metadata?.nickname || user.email?.split('@')[0] || '用户';
+  await loadUsage();
+
+  /* ---- Logout ---- */
+  $btnLogout.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.href = '/';
+  });
+
+  /* ---- Left nav switching ---- */
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      // Placeholder: module routing would go here
+    });
+  });
+
+  /* ---- Tag groups ---- */
+  function initTagGroup(containerId, stateKey) {
+    const container = document.getElementById(containerId);
+    container.querySelectorAll('.tag-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state[stateKey] = btn.dataset.val;
+      });
+    });
+  }
+
+  initTagGroup('style-tags', 'style');
+  initTagGroup('ratio-tags', 'ratio');
+
+  document.getElementById('qty-tags').querySelectorAll('.tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('qty-tags').querySelectorAll('.tag-btn')
+        .forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state.qty = parseInt(btn.dataset.val, 10);
+    });
+  });
+
+  /* ---- Collapsible prompt ---- */
+  const $promptToggle = document.getElementById('prompt-toggle');
+  const $promptBody   = document.getElementById('prompt-body');
+  $promptToggle.addEventListener('click', () => {
+    const open = $promptBody.classList.toggle('open');
+    $promptToggle.classList.toggle('open', open);
+  });
+
+  /* ---- Column selector ---- */
+  document.querySelectorAll('.col-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.col-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.cols = parseInt(btn.dataset.cols, 10);
+      $imageGrid.className = '';
+      $imageGrid.id = 'image-grid';
+      if (state.cols !== 3) $imageGrid.classList.add(`cols-${state.cols}`);
+    });
+  });
+
+  /* ---- Batch tabs ---- */
+  function renderBatchTabs() {
+    // Remove all tabs (not the + button)
+    $batchBar.querySelectorAll('.batch-tab').forEach(t => t.remove());
+
+    state.batches.forEach((_, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'batch-tab' + (i === state.activeBatch ? ' active' : '');
+      tab.dataset.batch = i;
+      tab.innerHTML = `批次 ${i + 1}`;
+      if (state.batches.length > 1) {
+        const closeSpan = document.createElement('span');
+        closeSpan.className = 'tab-close';
+        closeSpan.textContent = '×';
+        closeSpan.addEventListener('click', e => {
+          e.stopPropagation();
+          removeBatch(i);
+        });
+        tab.appendChild(closeSpan);
+      }
+      tab.addEventListener('click', () => switchBatch(i));
+      $batchBar.insertBefore(tab, $btnNewBatch);
+    });
+  }
+
+  function switchBatch(i) {
+    state.activeBatch = i;
+    renderBatchTabs();
+    renderGrid();
+  }
+
+  function removeBatch(i) {
+    state.batches.splice(i, 1);
+    if (state.activeBatch >= state.batches.length) {
+      state.activeBatch = state.batches.length - 1;
+    }
+    renderBatchTabs();
+    renderGrid();
+  }
+
+  $btnNewBatch.addEventListener('click', () => {
+    state.batches.push([]);
+    state.activeBatch = state.batches.length - 1;
+    renderBatchTabs();
+    renderGrid();
+  });
+
+  /* ---- Grid rendering ---- */
+  function renderGrid() {
+    const images = state.batches[state.activeBatch] || [];
+    $imageGrid.innerHTML = '';
+
+    if (images.length === 0) {
+      $imageGrid.appendChild($emptyState);
+      $emptyState.style.display = 'flex';
+      $resultCount.textContent = '共 0 张';
+      return;
+    }
+
+    $resultCount.textContent = `共 ${images.length} 张`;
+
+    images.forEach((url, idx) => {
+      const card = document.createElement('div');
+      card.className = 'img-card';
+      card.innerHTML = `
+        <img src="${url}" alt="图片 ${idx + 1}" loading="lazy" />
+        <div class="card-overlay">
+          <span class="card-seq">#${idx + 1}</span>
+          <div class="card-actions">
+            <button class="card-action-btn dl" title="下载">⬇</button>
+            <button class="card-action-btn del" title="删除">🗑</button>
+          </div>
+        </div>
+      `;
+
+      // Lightbox
+      card.querySelector('img').addEventListener('click', () => openLightbox(url));
+
+      // Download
+      card.querySelector('.dl').addEventListener('click', e => {
+        e.stopPropagation();
+        downloadImage(url, `aura_${Date.now()}_${idx + 1}.png`);
+      });
+
+      // Delete
+      card.querySelector('.del').addEventListener('click', e => {
+        e.stopPropagation();
+        state.batches[state.activeBatch].splice(idx, 1);
+        renderGrid();
+      });
+
+      $imageGrid.appendChild(card);
+    });
+  }
+
+  /* ---- Loading skeleton cards ---- */
+  function addSkeletonCards(count) {
+    // Remove empty state if present
+    if ($emptyState.parentNode === $imageGrid) {
+      $imageGrid.removeChild($emptyState);
+    }
+    const skeletons = [];
+    for (let i = 0; i < count; i++) {
+      const card = document.createElement('div');
+      card.className = 'img-card loading';
+      card.innerHTML = `<div class="load-label"><div class="spin"></div><span>生成中</span></div>`;
+      $imageGrid.appendChild(card);
+      skeletons.push(card);
+    }
+    return skeletons;
+  }
+
+  /* ---- Generate ---- */
+  $btnGenerate.addEventListener('click', async () => {
+    if (state.generating) return;
+
+    const keyword = $keyword.value.trim();
+    if (!keyword) { toast('请先输入产品关键词', 'error'); return; }
+
+    if (state.usedToday >= state.dailyLimit) {
+      toast('今日生成次数已达上限', 'error'); return;
+    }
+
+    state.generating = true;
+    $btnGenerate.disabled = true;
+    $progressWrap.classList.add('visible');
+    setProgress(0, '准备中…');
+
+    // Add skeleton cards to current batch grid
+    const skeletons = addSkeletonCards(state.qty);
+    $resultCount.textContent = `共 ${(state.batches[state.activeBatch].length + state.qty)} 张`;
+
+    try {
+      setProgress(15, '发送请求…');
+
+      const body = {
+        keyword,
+        style: state.style,
+        model: $modelSel.value,
+        ratio: state.ratio,
+        qty: state.qty,
+        customPrompt: $customPr.value.trim() || undefined,
+      };
+
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      setProgress(60, '模型生成中…');
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const urls = Array.isArray(data.urls) ? data.urls : (data.url ? [data.url] : []);
+
+      setProgress(90, '加载图片…');
+
+      // Replace skeletons with real images
+      skeletons.forEach((sk, i) => sk.remove());
+
+      urls.forEach(url => {
+        state.batches[state.activeBatch].push(url);
+      });
+
+      setProgress(100, '完成！');
+      state.usedToday += 1;
+      $usedCount.textContent = state.usedToday;
+
+      renderGrid();
+      toast(`成功生成 ${urls.length} 张图片`, 'success');
+
+    } catch (err) {
+      console.error('[AURA] generate error', err);
+      skeletons.forEach(sk => sk.remove());
+      toast('生成失败：' + err.message, 'error');
+      if (state.batches[state.activeBatch].length === 0) renderGrid(); // restore empty state
+    } finally {
+      state.generating = false;
+      $btnGenerate.disabled = false;
+      setTimeout(() => {
+        $progressWrap.classList.remove('visible');
+        setProgress(0, '生成中…');
+      }, 1200);
+    }
+  });
+
+  function setProgress(pct, label) {
+    $progressFill.style.width = pct + '%';
+    $progressPct.textContent = pct + '%';
+    if (label) $progressTxt.textContent = label;
+  }
+
+  /* ---- Usage ---- */
+  async function loadUsage() {
+    try {
+      const { data, error } = await sb
+        .from('usage_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', new Date().toISOString().slice(0, 10));
+
+      if (!error) {
+        state.usedToday = data?.length ?? 0;
+        $usedCount.textContent = state.usedToday;
+      }
+
+      // Try fetch limit from profile
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('daily_limit')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.daily_limit) {
+        state.dailyLimit = profile.daily_limit;
+        $limitCount.textContent = profile.daily_limit;
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  /* ---- Lightbox ---- */
+  function openLightbox(url) {
+    $lbImg.src = url;
+    $lightbox.classList.add('open');
+  }
+
+  $lbClose.addEventListener('click', () => $lightbox.classList.remove('open'));
+  $lightbox.addEventListener('click', e => {
+    if (e.target === $lightbox) $lightbox.classList.remove('open');
+  });
+
+  /* ---- Download ---- */
+  function downloadImage(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  /* ---- Toast ---- */
+  function toast(msg, type = 'info') {
+    const $tc = document.getElementById('toast-container');
+    const el = document.createElement('div');
+    el.className = 'toast' + (type !== 'info' ? ` ${type}` : '');
+    el.textContent = msg;
+    $tc.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; }, 2700);
+    setTimeout(() => el.remove(), 3000);
+  }
+
+  /* ---- Initial render ---- */
+  renderBatchTabs();
+  renderGrid();
+
+})();
+</script>
+</body>
+</html>

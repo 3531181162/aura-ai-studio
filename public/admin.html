@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AURA · 管理后台</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    /* ══════════════════════════════════════
+       Admin 布局
+       ══════════════════════════════════════ */
+    body {
+      padding-top: 60px;
+      min-height: 100vh;
+      background: var(--bg-0);
+    }
+
+    /* 顶部导航 */
+    .admin-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 60px;
+      background: rgba(7,6,10,.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--gold-bdr);
+      display: flex; align-items: center;
+      padding: 0 32px; gap: 16px;
+    }
+    .admin-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem; font-weight: 600;
+      color: var(--gold-lt);
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .admin-brand-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .admin-brand-sep {
+      color: var(--gold-bdr);
+      font-size: 1.3rem; font-weight: 100; margin: 0 4px;
+    }
+    .admin-brand-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-size: .8rem; font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: .06em;
+    }
+    .admin-nav-spacer { flex: 1; }
+    .admin-user-area {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .admin-user-name {
+      font-size: .85rem; color: var(--text-2);
+    }
+    .admin-role-badge {
+      background: rgba(201,169,110,.12);
+      border: 1px solid var(--gold-bdr);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: .72rem; font-weight: 600;
+      color: var(--gold);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    /* 主内容区 */
+    .admin-main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 28px 60px;
+    }
+
+    /* 页面标题 */
+    .admin-page-header {
+      margin-bottom: 28px;
+    }
+    .admin-page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.7rem; font-weight: 600;
+      color: var(--gold-lt);
+    }
+    .admin-page-sub {
+      font-size: .85rem; color: var(--text-3); margin-top: 4px;
+    }
+
+    /* 统计卡片行 */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card-admin {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-bdr2);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      transition: var(--trans);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card-admin::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold-dk), var(--gold), transparent);
+      opacity: 0;
+      transition: var(--trans);
+    }
+    .stat-card-admin:hover {
+      border-color: var(--gold-bdr);
+      box-shadow: var(--shadow-gold);
+      transform: translateY(-2px);
+    }
+    .stat-card-admin:hover::before { opacity: 1; }
+    .stat-card-admin .sc-icon {
+      font-size: 1.5rem; margin-bottom: 12px;
+      opacity: .7;
+    }
+    .stat-card-admin .sc-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem; font-weight: 700;
+      color: var(--gold-lt);
+      line-height: 1;
+    }
+    .stat-card-admin .sc-label {
+      font-size: .78rem; color: var(--text-3);
+      margin-top: 8px; letter-spacing: .04em;
+    }
+    .stat-card-admin .sc-trend {
+      font-size: .75rem; margin-top: 6px;
+      color: var(--green);
+    }
+
+    /* Tab 系统 */
+    .tabs-wrapper {
+      background: var(--bg-2);
+      border: 1px solid var(--gold-bdr2);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .tabs-header {
+      display: flex;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--gold-bdr2);
+      padding: 0 4px;
+    }
+    .tab-btn {
+      padding: 14px 22px;
+      font-size: .88rem; font-weight: 500;
+      color: var(--text-3);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: var(--trans);
+      position: relative;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .tab-btn::after {
+      content: '';
+      position: absolute; bottom: 0; left: 12px; right: 12px;
+      height: 2px; border-radius: 2px 2px 0 0;
+      background: var(--gold);
+      transform: scaleX(0);
+      transition: var(--trans);
+    }
+    .tab-btn:hover { color: var(--text-1); }
+    .tab-btn.active {
+      color: var(--gold);
+    }
+    .tab-btn.active::after { transform: scaleX(1); }
+
+    .tab-panel { display: none; padding: 28px; }
+    .tab-panel.active { display: block; }
+
+    /* 工具栏行 */
+    .toolbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .toolbar-search {
+      flex: 1; min-width: 200px; max-width: 360px;
+      position: relative;
+    }
+    .toolbar-search .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3); font-size: 14px;
+      pointer-events: none;
+    }
+    .toolbar-search .input {
+      padding-left: 36px;
+    }
+
+    /* 用户表格 */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--gold-bdr2);
+    }
+    .table td.td-user {
+      display: flex; align-items: center; gap: 10px; min-width: 180px;
+    }
+    .user-info-col .u-name { font-weight: 500; font-size: .9rem; }
+    .user-info-col .u-email { font-size: .75rem; color: var(--text-3); }
+
+    /* 进度条行 */
+    .usage-cell { min-width: 130px; }
+    .usage-nums { font-size: .78rem; color: var(--text-2); margin-bottom: 4px; }
+    .progress-bar { background: var(--bg-3); border-radius: 3px; height: 5px; }
+    .progress-fill { height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--gold-dk), var(--gold)); transition: width .4s; }
+
+    /* 数字输入 */
+    .input-num {
+      width: 80px;
+      background: var(--bg-1);
+      border: 1px solid var(--gold-bdr2);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      font-family: inherit; font-size: .85rem;
+      padding: 6px 10px; text-align: center;
+      outline: none; transition: var(--trans);
+    }
+    .input-num:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+    /* 操作按钮 */
+    .action-btns { display: flex; gap: 6px; align-items: center; }
+    .btn-icon {
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: 1px solid var(--gold-bdr2);
+      color: var(--text-3);
+      cursor: pointer; transition: var(--trans); font-size: 13px;
+    }
+    .btn-icon:hover { background: var(--bg-3); color: var(--text-1); border-color: var(--gold-bdr); }
+    .btn-icon.danger:hover { border-color: rgba(224,80,80,.4); color: var(--red); background: rgba(224,80,80,.08); }
+
+    /* 节点设置面板 */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .settings-section {
+      background: var(--bg-1);
+      border: 1px solid var(--gold-bdr2);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+    .settings-section-title {
+      font-size: .78rem; font-weight: 600;
+      color: var(--gold); text-transform: uppercase;
+      letter-spacing: .1em; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .settings-section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--gold-bdr2);
+    }
+
+    /* 复选框组 */
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+    .checkbox-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--gold-bdr2);
+      cursor: pointer; transition: var(--trans);
+      font-size: .82rem; color: var(--text-2);
+      user-select: none;
+    }
+    .checkbox-item input[type="checkbox"] { display: none; }
+    .checkbox-item.checked {
+      background: var(--gold-glow);
+      border-color: var(--gold);
+      color: var(--gold-lt);
+    }
+
+    /* 滑块 */
+    .slider-row { display: flex; align-items: center; gap: 14px; }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--bg-3);
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--gold);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(201,169,110,.4);
+    }
+    .slider-val {
+      min-width: 32px; text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; color: var(--gold-lt);
+    }
+
+    /* 用户覆盖设置 */
+    .user-override-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    /* 邀请码表格 */
+    .code-cell {
+      font-family: 'DM Mono', 'Courier New', monospace;
+      font-size: .88rem; letter-spacing: .1em;
+      color: var(--gold-lt);
+    }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--gold-bdr2);
+      border-radius: 5px;
+      padding: 3px 8px;
+      color: var(--text-3);
+      font-size: .75rem; cursor: pointer;
+      transition: var(--trans);
+    }
+    .copy-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* 使用记录 */
+    .log-prompt {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-2); font-size: .82rem;
+    }
+
+    /* 分页 */
+    .pagination {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-top: 20px;
+    }
+    .page-btn {
+      width: 34px; height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--gold-bdr2);
+      background: transparent; color: var(--text-2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: .85rem; transition: var(--trans);
+    }
+    .page-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .page-btn.active { background: var(--gold-glow); border-color: var(--gold); color: var(--gold-lt); font-weight: 600; }
+    .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .page-info { font-size: .82rem; color: var(--text-3); padding: 0 8px; }
+
+    /* 筛选行 */
+    .filter-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-row label { font-size: .8rem; color: var(--text-3); white-space: nowrap; }
+    .filter-row .select { max-width: 200px; }
+    .filter-row .input  { max-width: 160px; }
+
+    /* 空状态 */
+    .empty-state {
+      padding: 48px 0; text-align: center;
+      color: var(--text-3); font-size: .9rem;
+    }
+    .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .4; }
+
+    /* 加载遮罩 */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg-0);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+      z-index: 9999;
+    }
+    .loading-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem; color: var(--gold-lt);
+    }
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--gold-bdr2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 模态框扩展 */
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    /* 响应式 */
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .settings-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .admin-main { padding: 20px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 加载遮罩 -->
+<div id="loading-overlay">
+  <div class="loading-logo">AURA</div>
+  <div class="loading-spinner"></div>
+  <div style="font-size:.82rem;color:var(--text-3);">正在验证管理员权限…</div>
+</div>
+
+<!-- 顶部导航 -->
+<nav class="admin-nav">
+  <a class="admin-brand" href="/app.html">
+    <div class="admin-brand-icon">◆</div>
+    <span>AURA</span>
+    <span class="admin-brand-sep">·</span>
+    <span class="admin-brand-sub">管理后台</span>
+  </a>
+  <div class="admin-nav-spacer"></div>
+  <div class="admin-user-area">
+    <span class="admin-role-badge">Admin</span>
+    <span class="admin-user-name" id="admin-username">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="AURA.logout()">退出</button>
+  </div>
+</nav>
+
+<!-- 主内容 -->
+<main class="admin-main">
+
+  <!-- 页面标题 -->
+  <div class="admin-page-header">
+    <div class="admin-page-title">控制台总览</div>
+    <div class="admin-page-sub">AURA AI电商视觉工作台 · 管理员后台</div>
+  </div>
+
+  <!-- 统计卡片 -->
+  <div class="stats-row">
+    <div class="stat-card-admin">
+      <div class="sc-icon">👥</div>
+      <div class="sc-value" id="stat-total-users">—</div>
+      <div class="sc-label">总用户数</div>
+      <div class="sc-trend" id="stat-users-trend"></div>
+    </div>
+    <div class="stat-card-admin">
+      <div class="sc-icon">⚡</div>
+      <div class="sc-value" id="stat-today-gen">—</div>
+      <div class="sc-label">今日生成次数</div>
+      <div class="sc-trend" id="stat-today-trend"></div>
+    </div>
+    <div class="stat-card-admin">
+      <div class="sc-icon">📊</div>
+      <div class="sc-value" id="stat-month-gen">—</div>
+      <div class="sc-label">本月生成次数</div>
+      <div class="sc-trend" id="stat-month-trend"></div>
+    </div>
+    <div class="stat-card-admin">
+      <div class="sc-icon">✨</div>
+      <div class="sc-value" id="stat-active-users">—</div>
+      <div class="sc-label">活跃用户数（7天）</div>
+      <div class="sc-trend" id="stat-active-trend"></div>
+    </div>
+  </div>
+
+  <!-- Tab 容器 -->
+  <div class="tabs-wrapper">
+    <div class="tabs-header">
+      <button class="tab-btn active" onclick="switchTab('users', this)">👤 用户管理</button>
+      <button class="tab-btn" onclick="switchTab('nodes', this)">⚙️ 节点设置</button>
+      <button class="tab-btn" onclick="switchTab('codes', this)">🎫 邀请码管理</button>
+      <button class="tab-btn" onclick="switchTab('logs', this)">📋 使用记录</button>
+    </div>
+
+    <!-- ══════════ Tab1: 用户管理 ══════════ -->
+    <div class="tab-panel active" id="tab-users">
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <span class="search-icon">🔍</span>
+          <input class="input" id="user-search" placeholder="搜索邮箱或昵称…" oninput="filterUsers(this.value)" />
+        </div>
+        <div style="flex:1"></div>
+        <button class="btn btn-gold btn-sm" onclick="openAddUserModal()">＋ 新增用户</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="users-table">
+          <thead>
+            <tr>
+              <th>用户</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>今日用量</th>
+              <th>状态</th>
+              <th>每日上限</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7"><div class="empty-state"><div class="es-icon">⏳</div>加载中…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ Tab2: 节点设置 ══════════ -->
+    <div class="tab-panel" id="tab-nodes">
+
+      <!-- 全局默认设置 -->
+      <div style="margin-bottom:28px">
+        <div class="settings-section-title" style="margin-bottom:18px;font-size:.78rem;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:8px;">
+          全局默认配置
+          <span style="flex:1;height:1px;background:var(--gold-bdr2);display:block"></span>
+        </div>
+
+        <div class="settings-grid">
+          <!-- 左列 -->
+          <div class="settings-section">
+            <div class="settings-section-title">接口 &amp; 模型</div>
+
+            <div class="form-group">
+              <label>API Base URL</label>
+              <input class="input" id="g-api-url" placeholder="https://api.openai.com/v1" />
+            </div>
+
+            <div class="form-group">
+              <label>可用模型（多选）</label>
+              <div class="checkbox-group" id="g-models">
+                <label class="checkbox-item" onclick="toggleCheck(this)">
+                  <input type="checkbox" value="gpt-image-2" checked />gpt-image-2
+                </label>
+                <label class="checkbox-item checked" onclick="toggleCheck(this)">
+                  <input type="checkbox" value="gemini-3-pro" />gemini-3-pro
+                </label>
+                <label class="checkbox-item" onclick="toggleCheck(this)">
+                  <input type="checkbox" value="gemini-3.1-flash" />gemini-3.1-flash
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>默认风格</label>
+              <select class="select" id="g-default-style">
+                <option value="vivid">Vivid（鲜艳）</option>
+                <option value="natural">Natural（自然）</option>
+                <option value="product">Product（商品）</option>
+                <option value="lifestyle">Lifestyle（生活方式）</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 右列 -->
+          <div class="settings-section">
+            <div class="settings-section-title">生成规则</div>
+
+            <div class="form-group">
+              <label>允许的图片比例（多选）</label>
+              <div class="checkbox-group" id="g-ratios">
+                <label class="checkbox-item checked" onclick="toggleCheck(this)"><input type="checkbox" value="1:1" checked />1:1</label>
+                <label class="checkbox-item checked" onclick="toggleCheck(this)"><input type="checkbox" value="9:16" checked />9:16</label>
+                <label class="checkbox-item checked" onclick="toggleCheck(this)"><input type="checkbox" value="16:9" checked />16:9</label>
+                <label class="checkbox-item checked" onclick="toggleCheck(this)"><input type="checkbox" value="3:4" checked />3:4</label>
+                <label class="checkbox-item checked" onclick="toggleCheck(this)"><input type="checkbox" value="4:3" checked />4:3</label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>单次最大生成数量 <span class="slider-val" id="g-max-val">4</span></label>
+              <div class="slider-row">
+                <span style="font-size:.75rem;color:var(--text-3)">1</span>
+                <input type="range" id="g-max-gen" min="1" max="20" value="4"
+                  oninput="document.getElementById('g-max-val').textContent=this.value" />
+                <span style="font-size:.75rem;color:var(--text-3)">20</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>全局每日限额（次/人）</label>
+              <input class="input" type="number" id="g-daily-limit" min="1" value="50" />
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-gold" onclick="saveGlobalSettings()">💾 保存全局设置</button>
+      </div>
+
+      <!-- 用户自定义覆盖 -->
+      <div class="settings-section" style="background:var(--bg-1)">
+        <div class="settings-section-title">用户独立配置（覆盖全局）</div>
+
+        <div class="user-override-header">
+          <div class="form-group" style="flex:1;max-width:320px;margin:0">
+            <label>选择用户</label>
+            <select class="select" id="override-user-select" onchange="loadUserOverride(this.value)">
+              <option value="">— 选择用户 —</option>
+            </select>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:18px" onclick="saveUserOverride()">保存用户覆盖</button>
+          <button class="btn btn-ghost btn-sm" style="margin-top:18px" onclick="clearUserOverride()">清除覆盖</button>
+        </div>
+
+        <div id="user-override-panel" style="display:none">
+          <div class="settings-grid" style="margin-top:16px">
+            <div>
+              <div class="form-group">
+                <label>API Base URL（可留空继承全局）</label>
+                <input class="input" id="u-api-url" placeholder="留空则使用全局配置" />
+              </div>
+              <div class="form-group">
+                <label>可用模型</label>
+                <div class="checkbox-group" id="u-models">
+                  <label class="checkbox-item" onclick="toggleCheck(this)"><input type="checkbox" value="gpt-image-2" />gpt-image-2</label>
+                  <label class="checkbox-item" onclick="toggleCheck(this)"><input type="checkbox" value="gemini-3-pro" />gemini-3-pro</label>
+                  <label class="checkbox-item" onclick="toggleCheck(this)"><input type="checkbox" value="gemini-3.1-flash" />gemini-3.1-flash</label>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label>单次最大生成数量 <span class="slider-val" id="u-max-val">4</span></label>
+                <div class="slider-row">
+                  <span style="font-size:.75rem;color:var(--text-3)">1</span>
+                  <input type="range" id="u-max-gen" min="1" max="20" value="4"
+                    oninput="document.getElementById('u-max-val').textContent=this.value" />
+                  <span style="font-size:.75rem;color:var(--text-3)">20</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>每日限额（留空继承全局）</label>
+                <input class="input" type="number" id="u-daily-limit" placeholder="留空则使用全局配置" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ Tab3: 邀请码管理 ══════════ -->
+    <div class="tab-panel" id="tab-codes">
+      <div class="toolbar">
+        <div style="font-size:.85rem;color:var(--text-2)">管理平台邀请码，控制注册访问</div>
+        <div style="flex:1"></div>
+        <button class="btn btn-gold btn-sm" onclick="generateInviteCode()">✦ 生成邀请码</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" id="codes-table">
+          <thead>
+            <tr>
+              <th>邀请码</th>
+              <th>状态</th>
+              <th>使用者邮箱</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="codes-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="es-icon">⏳</div>加载中…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════ Tab4: 使用记录 ══════════ -->
+    <div class="tab-panel" id="tab-logs">
+      <div class="filter-row">
+        <label>用户：</label>
+        <select class="select" id="log-filter-user" onchange="loadLogs(1)">
+          <option value="">全部用户</option>
+        </select>
+        <label>开始日期：</label>
+        <input class="input" type="date" id="log-date-from" onchange="loadLogs(1)" />
+        <label>结束日期：</label>
+        <input class="input" type="date" id="log-date-to" onchange="loadLogs(1)" />
+        <button class="btn btn-ghost btn-sm" onclick="clearLogFilters()">重置</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" id="logs-table">
+          <thead>
+            <tr>
+              <th>用户邮箱</th>
+              <th>生成时间</th>
+              <th>模型</th>
+              <th>数量</th>
+              <th>提示词</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody">
+            <tr><td colspan="5"><div class="empty-state"><div class="es-icon">⏳</div>加载中…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="logs-pagination"></div>
+    </div>
+
+  </div><!-- /tabs-wrapper -->
+</main>
+
+<!-- ══════════ 新增用户模态框 ══════════ -->
+<div class="modal-overlay" id="add-user-modal" style="display:none" onclick="closeModalOnBg(event,'add-user-modal')">
+  <div class="modal">
+    <div class="modal-title">新增用户</div>
+    <div class="modal-sub">手动创建新的平台账户</div>
+    <div class="form-group">
+      <label>邮箱地址</label>
+      <input class="input" id="new-user-email" type="email" placeholder="user@example.com" />
+    </div>
+    <div class="form-group">
+      <label>昵称</label>
+      <input class="input" id="new-user-name" placeholder="昵称" />
+    </div>
+    <div class="form-group">
+      <label>角色</label>
+      <select class="select" id="new-user-role">
+        <option value="user">普通用户 (user)</option>
+        <option value="admin">管理员 (admin)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>每日限额</label>
+      <input class="input" type="number" id="new-user-limit" value="50" min="1" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-user-modal')">取消</button>
+      <button class="btn btn-gold" onclick="createUser()">创建用户</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 编辑用户模态框 ══════════ -->
+<div class="modal-overlay" id="edit-user-modal" style="display:none" onclick="closeModalOnBg(event,'edit-user-modal')">
+  <div class="modal">
+    <div class="modal-title">编辑用户</div>
+    <div class="modal-sub" id="edit-user-email-label">—</div>
+    <input type="hidden" id="edit-user-id" />
+    <div class="form-group">
+      <label>昵称</label>
+      <input class="input" id="edit-user-name" placeholder="昵称" />
+    </div>
+    <div class="form-group">
+      <label>角色</label>
+      <select class="select" id="edit-user-role">
+        <option value="user">普通用户 (user)</option>
+        <option value="admin">管理员 (admin)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>每日限额</label>
+      <input class="input" type="number" id="edit-user-limit" min="1" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('edit-user-modal')">取消</button>
+      <button class="btn btn-gold" onclick="saveEditUser()">保存更改</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ JavaScript ══════════ -->
+<script>
+/* ──────────────────────────────────────
+   全局状态
+   ────────────────────────────────────── */
+let sb = null;
+let allUsers = [];          // 缓存全量用户列表
+let filteredUsers = [];     // 筛选后的用户列表
+let globalSettings = {};    // 全局节点配置
+const LOG_PAGE_SIZE = 20;
+let logCurrentPage = 1;
+let logTotalCount = 0;
+
+/* ──────────────────────────────────────
+   初始化
+   ────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  // 等待 config.js 初始化 _supabase
+  await tick();
+
+  sb = window._supabase;
+
+  if (!sb) {
+    hideLoading();
+    AURA.toast('Supabase 未配置，部分功能不可用', 'error');
+    document.getElementById('admin-username').textContent = '（未连接）';
+    return;
+  }
+
+  // 权限验证
+  const user = await AURA.requireAuth();
+  if (!user) return;
+
+  const profile = await AURA.getProfile(user.id);
+  if (!profile || profile.role !== 'admin') {
+    AURA.toast('权限不足，仅管理员可访问', 'error');
+    setTimeout(() => { window.location.href = '/app.html'; }, 1500);
+    return;
+  }
+
+  document.getElementById('admin-username').textContent = profile.display_name || user.email;
+  hideLoading();
+
+  // 并行加载数据
+  await Promise.all([
+    loadStats(),
+    loadUsers(),
+    loadInviteCodes(),
+    loadGlobalSettings(),
+  ]);
+
+  // 初始化日志日期（默认今天）
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('log-date-to').value = today;
+  const monthAgo = new Date(Date.now() - 30*24*3600*1000).toISOString().slice(0, 10);
+  document.getElementById('log-date-from').value = monthAgo;
+});
+
+function tick() { return new Promise(r => setTimeout(r, 50)); }
+
+function hideLoading() {
+  const ov = document.getElementById('loading-overlay');
+  ov.style.transition = 'opacity .4s';
+  ov.style.opacity = '0';
+  setTimeout(() => ov.remove(), 420);
+}
+
+/* ──────────────────────────────────────
+   Tab 切换
+   ────────────────────────────────────── */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+
+  // 懒加载使用记录
+  if (name === 'logs') loadLogs(1);
+}
+
+/* ──────────────────────────────────────
+   统计卡片
+   ────────────────────────────────────── */
+async function loadStats() {
+  if (!sb) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const monthStart = today.slice(0, 7) + '-01';
+  const sevenDaysAgo = new Date(Date.now() - 7*24*3600*1000).toISOString().slice(0, 10);
+
+  const [
+    { count: totalUsers },
+    { count: todayGen },
+    { count: monthGen },
+    { count: activeUsers },
+  ] = await Promise.all([
+    sb.from('profiles').select('*', { count: 'exact', head: true }),
+    sb.from('usage_logs').select('*', { count: 'exact', head: true }).gte('created_at', today),
+    sb.from('usage_logs').select('*', { count: 'exact', head: true }).gte('created_at', monthStart),
+    sb.from('usage_logs').select('user_id', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
+  ]);
+
+  animateCount('stat-total-users', totalUsers || 0);
+  animateCount('stat-today-gen', todayGen || 0);
+  animateCount('stat-month-gen', monthGen || 0);
+  animateCount('stat-active-users', activeUsers || 0);
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  const dur = 800, fps = 30, steps = dur / (1000 / fps);
+  let cur = 0;
+  const inc = target / steps;
+  const t = setInterval(() => {
+    cur = Math.min(cur + inc, target);
+    el.textContent = Math.round(cur).toLocaleString();
+    if (cur >= target) clearInterval(t);
+  }, 1000 / fps);
+}
+
+/* ──────────────────────────────────────
+   Tab1: 用户管理
+   ────────────────────────────────────── */
+async function loadUsers() {
+  if (!sb) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1. 获取所有用户 profile
+  const { data: profiles, error } = await sb
+    .from('profiles')
+    .select('id, display_name, email, role, daily_limit, is_active, avatar_url, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { AURA.toast('加载用户失败: ' + error.message, 'error'); return; }
+
+  // 2. 今日使用量汇总
+  const { data: todayLogs } = await sb
+    .from('usage_logs')
+    .select('user_id, count')
+    .gte('created_at', today);
+
+  const usageMap = {};
+  (todayLogs || []).forEach(r => {
+    usageMap[r.user_id] = (usageMap[r.user_id] || 0) + (r.count || 1);
+  });
+
+  // 3. 统计今日使用量（usage_logs 按 user_id group）
+  // 若 usage_logs 没有 count 列，则按行数计
+  const { data: rawLogs } = await sb
+    .from('usage_logs')
+    .select('user_id')
+    .gte('created_at', today);
+
+  const rawMap = {};
+  (rawLogs || []).forEach(r => {
+    rawMap[r.user_id] = (rawMap[r.user_id] || 0) + 1;
+  });
+
+  allUsers = (profiles || []).map(p => ({
+    ...p,
+    today_usage: rawMap[p.id] || 0,
+  }));
+
+  filteredUsers = [...allUsers];
+  renderUsersTable(filteredUsers);
+  populateUserSelects();
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">👥</div>暂无用户数据</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map(u => {
+    const limit = u.daily_limit || 50;
+    const pct = Math.min(100, Math.round((u.today_usage / limit) * 100));
+    const pctColor = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--gold)' : 'var(--gold-dk)';
+    const initials = (u.display_name || u.email || '?').charAt(0).toUpperCase();
+    return `
+      <tr data-uid="${u.id}">
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            ${u.avatar_url
+              ? `<img src="${u.avatar_url}" style="width:34px;height:34px;border-radius:50%;object-fit:cover" />`
+              : `<div class="avatar">${initials}</div>`
+            }
+            <div>
+              <div style="font-weight:500;font-size:.88rem">${esc(u.display_name || '未设置昵称')}</div>
+              <div style="font-size:.74rem;color:var(--text-3)">${esc(u.email || '')}</div>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--text-2);font-size:.82rem">${esc(u.email || '—')}</td>
+        <td>
+          <span class="badge ${u.role === 'admin' ? '' : 'badge-green'}"
+            style="${u.role === 'admin' ? '' : 'background:rgba(107,159,224,.1);border-color:rgba(107,159,224,.2);color:var(--blue)'}">
+            ${u.role === 'admin' ? '◆ admin' : '· user'}
+          </span>
+        </td>
+        <td>
+          <div class="usage-nums">${u.today_usage} / ${limit}</div>
+          <div class="progress-bar" style="width:110px">
+            <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,${pctColor},${pctColor})"></div>
+          </div>
+        </td>
+        <td>
+          <label class="toggle">
+            <input type="checkbox" ${u.is_active !== false ? 'checked' : ''}
+              onchange="toggleUserStatus('${u.id}', this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td>
+          <input class="input-num" type="number" value="${limit}" min="1"
+            onchange="updateUserLimit('${u.id}', this.value)" />
+        </td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-icon" title="编辑" onclick="openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">✏️</button>
+            <button class="btn-icon danger" title="删除" onclick="deleteUser('${u.id}','${esc(u.email || u.display_name)}')">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterUsers(q) {
+  q = q.toLowerCase().trim();
+  filteredUsers = q
+    ? allUsers.filter(u =>
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.display_name || '').toLowerCase().includes(q)
+      )
+    : [...allUsers];
+  renderUsersTable(filteredUsers);
+}
+
+async function toggleUserStatus(uid, active) {
+  const { error } = await sb.from('profiles').update({ is_active: active }).eq('id', uid);
+  if (error) { AURA.toast('更新失败: ' + error.message, 'error'); return; }
+  AURA.toast(active ? '用户已启用' : '用户已停用', 'success');
+  const u = allUsers.find(u => u.id === uid);
+  if (u) u.is_active = active;
+}
+
+async function updateUserLimit(uid, val) {
+  const limit = parseInt(val, 10);
+  if (isNaN(limit) || limit < 1) return;
+  const { error } = await sb.from('profiles').update({ daily_limit: limit }).eq('id', uid);
+  if (error) { AURA.toast('更新失败', 'error'); return; }
+  AURA.toast('限额已更新', 'success');
+  const u = allUsers.find(u => u.id === uid);
+  if (u) u.daily_limit = limit;
+}
+
+async function deleteUser(uid, label) {
+  if (!confirm(`确定要删除用户「${label}」吗？此操作不可恢复。`)) return;
+  const { error } = await sb.from('profiles').delete().eq('id', uid);
+  if (error) { AURA.toast('删除失败: ' + error.message, 'error'); return; }
+  AURA.toast('用户已删除', 'success');
+  allUsers = allUsers.filter(u => u.id !== uid);
+  filteredUsers = filteredUsers.filter(u => u.id !== uid);
+  renderUsersTable(filteredUsers);
+  populateUserSelects();
+}
+
+/* 新增用户模态框 */
+function openAddUserModal() {
+  document.getElementById('new-user-email').value = '';
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-role').value = 'user';
+  document.getElementById('new-user-limit').value = '50';
+  openModal('add-user-modal');
+}
+
+async function createUser() {
+  const email = document.getElementById('new-user-email').value.trim();
+  const name = document.getElementById('new-user-name').value.trim();
+  const role = document.getElementById('new-user-role').value;
+  const limit = parseInt(document.getElementById('new-user-limit').value, 10) || 50;
+
+  if (!email) { AURA.toast('邮箱不能为空', 'error'); return; }
+
+  const { data, error } = await sb.from('profiles').insert({
+    email, display_name: name, role, daily_limit: limit, is_active: true,
+  }).select().single();
+
+  if (error) { AURA.toast('创建失败: ' + error.message, 'error'); return; }
+  AURA.toast('用户已创建', 'success');
+  closeModal('add-user-modal');
+  allUsers.unshift({ ...data, today_usage: 0 });
+  filteredUsers = [...allUsers];
+  renderUsersTable(filteredUsers);
+  populateUserSelects();
+}
+
+/* 编辑用户模态框 */
+function openEditUserModal(u) {
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('edit-user-email-label').textContent = u.email || u.id;
+  document.getElementById('edit-user-name').value = u.display_name || '';
+  document.getElementById('edit-user-role').value = u.role || 'user';
+  document.getElementById('edit-user-limit').value = u.daily_limit || 50;
+  openModal('edit-user-modal');
+}
+
+async function saveEditUser() {
+  const uid = document.getElementById('edit-user-id').value;
+  const name = document.getElementById('edit-user-name').value.trim();
+  const role = document.getElementById('edit-user-role').value;
+  const limit = parseInt(document.getElementById('edit-user-limit').value, 10) || 50;
+
+  const { error } = await sb.from('profiles')
+    .update({ display_name: name, role, daily_limit: limit })
+    .eq('id', uid);
+
+  if (error) { AURA.toast('保存失败: ' + error.message, 'error'); return; }
+  AURA.toast('用户信息已更新', 'success');
+  closeModal('edit-user-modal');
+  const u = allUsers.find(u => u.id === uid);
+  if (u) Object.assign(u, { display_name: name, role, daily_limit: limit });
+  renderUsersTable(filteredUsers);
+}
+
+/* ──────────────────────────────────────
+   Tab2: 节点设置
+   ────────────────────────────────────── */
+async function loadGlobalSettings() {
+  if (!sb) return;
+  const { data } = await sb.from('app_settings').select('value').eq('key', 'global_node').single();
+  if (data?.value) {
+    globalSettings = data.value;
+    applyGlobalSettingsToUI(globalSettings);
+  }
+}
+
+function applyGlobalSettingsToUI(s) {
+  if (s.api_url) document.getElementById('g-api-url').value = s.api_url;
+  if (s.daily_limit) document.getElementById('g-daily-limit').value = s.daily_limit;
+  if (s.max_gen) {
+    document.getElementById('g-max-gen').value = s.max_gen;
+    document.getElementById('g-max-val').textContent = s.max_gen;
+  }
+  if (s.default_style) document.getElementById('g-default-style').value = s.default_style;
+
+  if (s.models) {
+    document.querySelectorAll('#g-models .checkbox-item').forEach(el => {
+      const val = el.querySelector('input').value;
+      el.classList.toggle('checked', s.models.includes(val));
+    });
+  }
+  if (s.ratios) {
+    document.querySelectorAll('#g-ratios .checkbox-item').forEach(el => {
+      const val = el.querySelector('input').value;
+      el.classList.toggle('checked', s.ratios.includes(val));
+    });
+  }
+}
+
+async function saveGlobalSettings() {
+  if (!sb) { AURA.toast('未连接 Supabase', 'error'); return; }
+
+  const settings = {
+    api_url: document.getElementById('g-api-url').value.trim(),
+    models: getCheckedValues('#g-models'),
+    ratios: getCheckedValues('#g-ratios'),
+    max_gen: parseInt(document.getElementById('g-max-gen').value, 10),
+    default_style: document.getElementById('g-default-style').value,
+    daily_limit: parseInt(document.getElementById('g-daily-limit').value, 10) || 50,
+  };
+
+  const { error } = await sb.from('app_settings')
+    .upsert({ key: 'global_node', value: settings }, { onConflict: 'key' });
+
+  if (error) { AURA.toast('保存失败: ' + error.message, 'error'); return; }
+  globalSettings = settings;
+  AURA.toast('全局配置已保存', 'success');
+}
+
+function getCheckedValues(selector) {
+  return [...document.querySelectorAll(selector + ' .checkbox-item.checked')]
+    .map(el => el.querySelector('input').value);
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+}
+
+async function loadUserOverride(uid) {
+  const panel = document.getElementById('user-override-panel');
+  if (!uid) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  if (!sb) return;
+  const { data } = await sb.from('user_settings').select('value').eq('user_id', uid).single();
+  const s = data?.value || {};
+
+  document.getElementById('u-api-url').value = s.api_url || '';
+  document.getElementById('u-max-gen').value = s.max_gen || 4;
+  document.getElementById('u-max-val').textContent = s.max_gen || 4;
+  document.getElementById('u-daily-limit').value = s.daily_limit || '';
+
+  document.querySelectorAll('#u-models .checkbox-item').forEach(el => {
+    const val = el.querySelector('input').value;
+    el.classList.toggle('checked', (s.models || []).includes(val));
+  });
+}
+
+async function saveUserOverride() {
+  const uid = document.getElementById('override-user-select').value;
+  if (!uid) { AURA.toast('请先选择用户', 'error'); return; }
+
+  const val = {
+    api_url: document.getElementById('u-api-url').value.trim() || null,
+    models: getCheckedValues('#u-models'),
+    max_gen: parseInt(document.getElementById('u-max-gen').value, 10),
+    daily_limit: parseInt(document.getElementById('u-daily-limit').value, 10) || null,
+  };
+
+  const { error } = await sb.from('user_settings')
+    .upsert({ user_id: uid, value: val }, { onConflict: 'user_id' });
+
+  if (error) { AURA.toast('保存失败: ' + error.message, 'error'); return; }
+  AURA.toast('用户配置已保存', 'success');
+}
+
+async function clearUserOverride() {
+  const uid = document.getElementById('override-user-select').value;
+  if (!uid) return;
+  if (!confirm('确定清除该用户的自定义配置？将恢复使用全局设置。')) return;
+
+  const { error } = await sb.from('user_settings').delete().eq('user_id', uid);
+  if (error) { AURA.toast('清除失败: ' + error.message, 'error'); return; }
+  AURA.toast('已清除用户覆盖配置', 'success');
+  loadUserOverride(uid);
+}
+
+function populateUserSelects() {
+  const selects = [
+    document.getElementById('override-user-select'),
+    document.getElementById('log-filter-user'),
+  ];
+  selects.forEach(sel => {
+    if (!sel) return;
+    const prev = sel.value;
+    const placeholder = sel.options[0].text;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    allUsers.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = u.email || u.display_name || u.id;
+      sel.appendChild(opt);
+    });
+    sel.value = prev;
+  });
+}
+
+/* ──────────────────────────────────────
+   Tab3: 邀请码管理
+   ────────────────────────────────────── */
+async function loadInviteCodes() {
+  if (!sb) return;
+  const { data, error } = await sb
+    .from('invite_codes')
+    .select('id, code, is_used, used_by_email, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { AURA.toast('加载邀请码失败', 'error'); return; }
+  renderCodesTable(data || []);
+}
+
+function renderCodesTable(codes) {
+  const tbody = document.getElementById('codes-tbody');
+  if (!codes.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="es-icon">🎫</div>暂无邀请码</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = codes.map(c => `
+    <tr>
+      <td class="code-cell">${esc(c.code)}</td>
+      <td>
+        <span class="badge ${c.is_used ? 'badge-red' : 'badge-green'}">
+          ${c.is_used ? '已使用' : '可用'}
+        </span>
+      </td>
+      <td style="color:var(--text-2);font-size:.83rem">${esc(c.used_by_email || '—')}</td>
+      <td style="color:var(--text-3);font-size:.8rem">${fmtDate(c.created_at)}</td>
+      <td>
+        <div class="action-btns">
+          <button class="copy-btn" onclick="copyCode('${esc(c.code)}')">复制</button>
+          ${!c.is_used ? `<button class="btn-icon danger" onclick="revokeCode('${c.id}')">🗑️</button>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+async function generateInviteCode() {
+  if (!sb) { AURA.toast('未连接 Supabase', 'error'); return; }
+  const code = generateCode();
+  const { error } = await sb.from('invite_codes').insert({ code, is_used: false });
+  if (error) { AURA.toast('生成失败: ' + error.message, 'error'); return; }
+  AURA.toast(`邀请码已生成: ${code}`, 'success');
+  loadInviteCodes();
+}
+
+async function revokeCode(id) {
+  if (!confirm('确定删除该邀请码？')) return;
+  const { error } = await sb.from('invite_codes').delete().eq('id', id);
+  if (error) { AURA.toast('删除失败', 'error'); return; }
+  AURA.toast('邀请码已删除', 'success');
+  loadInviteCodes();
+}
+
+function copyCode(code) {
+  navigator.clipboard.writeText(code).then(() => {
+    AURA.toast(`已复制: ${code}`, 'success');
+  }).catch(() => {
+    AURA.toast('复制失败，请手动复制', 'error');
+  });
+}
+
+/* ──────────────────────────────────────
+   Tab4: 使用记录
+   ────────────────────────────────────── */
+async function loadLogs(page) {
+  if (!sb) return;
+  logCurrentPage = page || 1;
+
+  const uid = document.getElementById('log-filter-user').value;
+  const from = document.getElementById('log-date-from').value;
+  const to = document.getElementById('log-date-to').value;
+
+  let query = sb.from('usage_logs')
+    .select('id, user_id, created_at, model, count, prompt, profiles(email, display_name)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range((logCurrentPage - 1) * LOG_PAGE_SIZE, logCurrentPage * LOG_PAGE_SIZE - 1);
+
+  if (uid) query = query.eq('user_id', uid);
+  if (from) query = query.gte('created_at', from);
+  if (to) query = query.lte('created_at', to + 'T23:59:59');
+
+  const { data, count, error } = await query;
+  if (error) { AURA.toast('加载记录失败: ' + error.message, 'error'); return; }
+
+  logTotalCount = count || 0;
+  renderLogsTable(data || []);
+  renderPagination();
+}
+
+function renderLogsTable(logs) {
+  const tbody = document.getElementById('logs-tbody');
+  if (!logs.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="es-icon">📋</div>暂无使用记录</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = logs.map(l => {
+    const email = l.profiles?.email || l.user_id?.slice(0, 8) + '…' || '—';
+    const prompt = l.prompt || '—';
+    return `
+      <tr>
+        <td style="font-size:.83rem;color:var(--text-2)">${esc(email)}</td>
+        <td style="font-size:.8rem;color:var(--text-3);white-space:nowrap">${fmtDate(l.created_at)}</td>
+        <td><span class="badge" style="font-size:.72rem">${esc(l.model || '—')}</span></td>
+        <td style="text-align:center;color:var(--gold-lt);font-weight:600">${l.count || 1}</td>
+        <td><div class="log-prompt" title="${esc(prompt)}">${esc(prompt)}</div></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(logTotalCount / LOG_PAGE_SIZE);
+  const pg = document.getElementById('logs-pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `
+    <button class="page-btn" ${logCurrentPage <= 1 ? 'disabled' : ''} onclick="loadLogs(${logCurrentPage - 1})">‹</button>
+  `;
+
+  const range = pageRange(logCurrentPage, totalPages);
+  range.forEach(p => {
+    if (p === '…') {
+      html += `<span class="page-info">…</span>`;
+    } else {
+      html += `<button class="page-btn ${p === logCurrentPage ? 'active' : ''}" onclick="loadLogs(${p})">${p}</button>`;
+    }
+  });
+
+  html += `
+    <button class="page-btn" ${logCurrentPage >= totalPages ? 'disabled' : ''} onclick="loadLogs(${logCurrentPage + 1})">›</button>
+    <span class="page-info">共 ${logTotalCount.toLocaleString()} 条</span>
+  `;
+  pg.innerHTML = html;
+}
+
+function pageRange(cur, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (cur > 3) pages.push('…');
+  for (let i = Math.max(2, cur - 1); i <= Math.min(total - 1, cur + 1); i++) pages.push(i);
+  if (cur < total - 2) pages.push('…');
+  pages.push(total);
+  return pages;
+}
+
+function clearLogFilters() {
+  document.getElementById('log-filter-user').value = '';
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('log-date-to').value = today;
+  document.getElementById('log-date-from').value =
+    new Date(Date.now() - 30*24*3600*1000).toISOString().slice(0, 10);
+  loadLogs(1);
+}
+
+/* ──────────────────────────────────────
+   工具函数
+   ────────────────────────────────────── */
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function closeModalOnBg(e, id) { if (e.target === e.currentTarget) closeModal(id); }
+</script>
+</body>
+</html>

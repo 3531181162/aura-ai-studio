@@ -1,0 +1,8 @@
+{
+  "name": "aura-ai-studio",
+  "version": "1.0.0",
+  "description": "AURA AI电商视觉工作台",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
